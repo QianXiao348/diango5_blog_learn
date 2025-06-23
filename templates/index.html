@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}博客首页{% endblock %}
+
+{% block main %}
+    <h1>博客列表</h1>
+    <div class="row row-cols-2 row-gap-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <a href="#">不想去教堂</a>
+                </div>
+                <div class="card-body" style="height: 120px;">
+                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                </div>
+                <div class="card-footer text-body-secondary d-flex justify-content-between">
+                    <div>
+                        <img src="{% static 'image/sv.jpg' %}" class="rounded-circle" width="30" alt=""> 圣女
+                    </div>
+                    <div>
+                        发布时间：2025-05-23 8:50
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <a href="#">Django从入门到入土</a>
+                </div>
+                <div class="card-body" style="height: 120px;">
+                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                </div>
+                <div class="card-footer text-body-secondary d-flex justify-content-between">
+                    <div>
+                        <img src="{% static 'image/asd.png' %}" class="rounded-circle" width="30" alt=""> 大小姐
+                    </div>
+                    <div>
+                        发布时间：2025-06-23 11:30
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <a href="#">大小姐的Vlog</a>
+                </div>
+                <div class="card-body" style="height: 120px;">
+                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                </div>
+                <div class="card-footer text-body-secondary d-flex justify-content-between">
+                    <div>
+                        <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="30" alt=""> 夏虹
+                    </div>
+                    <div>
+                        发布时间：2025-06-22 17:30
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <a href="#">K-on聚会</a>
+                </div>
+                <div class="card-body" style="height: 120px;">
+                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                </div>
+                <div class="card-footer text-body-secondary d-flex justify-content-between">
+                    <div>
+                        <img src="{% static 'image/21.png' %}" class="rounded-circle" width="30" alt=""> mio酱
+                    </div>
+                    <div>
+                        发布时间：2025-06-21 12:20
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
