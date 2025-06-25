@@ -26,7 +26,7 @@ $(function () {
             })
 
             // 倒计时
-            let countdown = 6;
+            let countdown = 60;
             let timer = setInterval(function () {
                 if (countdown <= 0) {
                     $this.text('获取验证码');

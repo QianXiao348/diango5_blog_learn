@@ -2,11 +2,17 @@
 
 {% block title %}注册博客{% endblock %} 
 
+{% block head %}
+    <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'js/register.js' %}"></script>
+{% endblock %}
+
 {% block main %}
 <main class="container bg-white p-3 rounded">
         <div style="max-width: 330px;" class="mx-auto">
             <h1>注册</h1>
             <form action="" method="post">
+                {% csrf_token %}
                 <div class="mb-2">
                     <label>用户名</label>
                     <input type="text" name="username" class="form-control" placeholder="请输入用户名">
@@ -22,9 +28,9 @@
                 <div class="mb-2">
                     <label>验证码</label>
                     <div class="input-group mb-2">
-                        <input type="text" class="form-control" placeholder="请输入验证码" aria-label="Recipient’s username"
+                        <input type="text" class="form-control" name="captcha" placeholder="请输入验证码" aria-label="Recipient’s username"
                             aria-describedby="button-addon2">
-                        <button class="btn btn-outline-secondary" type="button" id="button-addon2">获取验证码</button>
+                        <button class="btn btn-outline-secondary" type="button" id="captcha-btn">获取验证码</button>
                     </div>
                 </div>
                 <div class="mb-2">

@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'blog',
+    'qxauth'
 ]
 
 MIDDLEWARE = [
@@ -77,8 +79,10 @@ WSGI_APPLICATION = 'sjt_blog.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'OPTIONS': {
+                'read_default_file': 'my.cnf',
+            },
     }
 }
 
@@ -105,15 +109,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
 USE_L10N = True
-
-USE_TZ = True
+# 时区
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -129,3 +133,13 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.qq.com'  # 邮件类型
+EMAIL_PORT = 587
+EMAIL_HOST_USER = '1768248496@qq.com'
+EMAIL_HOST_PASSWORD = 'tphttsmmhlruifai'  # 授权码
+DEFAULT_FROM_EMAIL = '1768248496@qq.com'  # 默认发送邮件

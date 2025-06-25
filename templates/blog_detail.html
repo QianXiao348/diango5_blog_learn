@@ -2,52 +2,45 @@
 {% block title %}博客详情页{% endblock %}
 
 {% block main %}
-<h1>大小姐的Vlog</h1>
-<hr>
-<div class="mt-2">
-    <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="30" alt="">
-    <span class="ms-2">夏虹</span>
-    <span class="ms-2">于</span>
-    <span class="ms-2">2025-06-22 17:30</span>发布
-</div>
-<hr>
-<div class="py-2">
-    这是博客详情
-</div>
-<hr>
-<div class="mt-2">
-    <h3>评论（10）：</h3>
-    <form action="" method="post">
-        <div class="mt-2">
-            <input type="text" class="form-control" placeholder="请输入评论">
-        </div>
-        <div class="text-end mt-2">
-            <button type="button" class="btn btn-success">评论</button>
-        </div>
-    </form>
-</div>
-<div class="mt-2">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item mb-2">
-            <div class="d-flex justify-content-between text-body-secondary">
-                <div class="user-info">
-                    <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="40" alt="">
-                    <span class="ms-2">夏虹</span>
-                </div>
-                <div class="create-time" style="line-height: 40px;">2025-06-22 17:30</div>
+    <h1>{{ blog.title }}</h1>
+    <hr>
+    <div class="mt-2">
+        <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="30" alt="">
+        <span class="ms-2">{{ blog.author.username }}</span>
+        <span class="ms-2">发布时间：</span>
+        <span class="ms-2 font-monospace">{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}</span>
+    </div>
+    <hr>
+    <div class="py-2">
+        {{ blog.content|safe }}
+    </div>
+    <hr>
+    <div class="mt-2">
+        <h3>评论（{{ blog.comments.all|length }}）：</h3>
+        <form action="{% url 'blog:pub_comment' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="blog_id" , value="{{ blog.id }}">
+            <div class="mt-2">
+                <input type="text" class="form-control" placeholder="请输入评论" name="content">
             </div>
-            <div class="mt-2">这是评论内容</div>
-        </li>
-        <li class="list-group-item mb-2">
-            <div class="d-flex justify-content-between text-body-secondary">
-                <div class="user-info">
-                    <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="40" alt="">
-                    <span class="ms-2">夏虹</span>
-                </div>
-                <div class="create-time" style="line-height: 40px;">2025-06-22 17:30</div>
+            <div class="text-end mt-2">
+                <button type="submit" class="btn btn-success">提交</button>
             </div>
-            <div class="mt-2">这是评论内容</div>
-        </li>
-    </ul>
-</div>
+        </form>
+    </div>
+    <div class="mt-2">
+        <ul class="list-group list-group-flush">
+            {% for comment in blog.comments.all %}
+                <div class="d-flex justify-content-between text-body-secondary">
+                    <div class="user-info">
+                        <img src="{% static 'image/xh.jpeg' %}" class="rounded-circle" width="40" alt="">
+                        <span class="ms-2">{{ comment.author.usename }}</span>
+                    </div>
+                    <div class="create-time" style="line-height: 40px; font-size: 15px">{{ comment.pub_time|date:'Y年m月d日 H时i分s秒'}}</div>
+                </div>
+                <div class="mt-2">{{ comment.content }}</div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
 {% endblock %}
