@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import CaptchaModel
+from .models import CaptchaModel, Profile
 
 User = get_user_model()  #  使用Django自带的用户类
 
@@ -25,7 +25,19 @@ class RegisterForm(forms.Form):
         'max_length':'密码长度不能超过20',
         'min_length':'密码长度不能少于6'
     })
-    
+    password2 = forms.CharField(max_length=20, min_length=6, error_messages={
+        'required': '请重复输入密码',
+        'max_length': '密码长度不能超过20',
+        'min_length': '密码长度不能少于6'
+    })
+
+    def clean(self):
+        password = self.cleaned_data.get('password')
+        password2 = self.cleaned_data.get('password2')
+        if password != password2:
+            raise forms.ValidationError('两次密码不一致！')
+        return self.cleaned_data
+
     # 检验邮箱是否存在数据库
     def clean_email(self):
         email = self.cleaned_data.get('email')  # 通过表单验证后提取 email 字段的值。
@@ -45,7 +57,8 @@ class RegisterForm(forms.Form):
         captcha_model.delete()  #  删除验证码
         return captcha
         
-         
+
+# 登录表单
 class LoginForm(forms.Form):
     email = forms.EmailField(error_messages={
         'required':'请输入邮箱',
@@ -57,3 +70,9 @@ class LoginForm(forms.Form):
         'min_length':'密码长度不能少于6'
     })
     remeber = forms.IntegerField(required=False)
+
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['phone','birth','avatar','bio']

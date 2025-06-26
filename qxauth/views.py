@@ -2,12 +2,16 @@ from django.shortcuts import render, redirect, reverse
 from django.http.response import JsonResponse
 import string
 import random
+from django.http import HttpResponse
 from django.core.mail import send_mail
-from qxauth.models import CaptchaModel
 from django.views.decorators.http import require_http_methods
-from .forms import RegisterForm, LoginForm
+from .forms import RegisterForm, LoginForm, ProfileForm
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import User
+from django.urls.base import reverse_lazy
+from django.contrib.auth.decorators import login_required
+from .models import Profile,CaptchaModel
+
 
 User = get_user_model()
 
@@ -31,7 +35,8 @@ def qxlogin(request):
                 return redirect('/')  # 登录成功后跳转到首页
             else:
                 print("邮箱或密码错误！")
-                return redirect(reverse('qxauth:login'))
+                return HttpResponse("注册输入有误。请再次检查输入邮箱或密码是否符合标准，并重新输入~")
+                # return redirect(reverse('qxauth:login'))
 
 # 用户登出
 def qxlogout(request):
@@ -54,8 +59,9 @@ def register(request):
             return redirect(reverse('qxauth:login'))
         else:
             print(form.errors)
+            return HttpResponse(form.errors)
             # 重新跳转到注册页面
-            return redirect(reverse('qxauth:register'))
+            # return redirect(reverse('qxauth:register'))
             # return render(request, 'register.html', context={'form':form})
               
 # 发送邮件验证码
@@ -69,3 +75,46 @@ def send_email_captcha(request):
     CaptchaModel.objects.update_or_create(email=email, defaults={'captcha': captcha})
     send_mail("博客注册验证码", message=f'您的验证码是：{captcha}', recipient_list=[email], from_email=None)
     return JsonResponse({"code":200, "message": "邮箱验证码发送成功！"})
+
+# 修改用户信息
+@require_http_methods(['GET', 'POST'])
+@login_required(login_url=reverse_lazy('qxauth:login'))
+def edit_profile(request, user_id):
+    user = User.objects.get(id=user_id)
+    if Profile.objects.filter(user_id=user_id).exists():
+        # user_id 是 OneToOneField 自动生成的字段
+        profile = Profile.objects.get(user_id=user_id)
+    else:
+        profile = Profile.objects.create(user=user)
+
+    if request.method == 'POST':
+        # 验证修改数据者，是否为用户本人
+        if request.user != user:
+            return HttpResponse('您没有权限修改此用户信息~ 喵！')
+
+        # 上传的文件保存在 request.FILES 中，通过参数传递给表单类
+        profile_form = ProfileForm(request.POST, request.FILES)
+
+        if profile_form.is_valid():
+            # 取得清洗后的合法数据
+            profile_cd = profile_form.cleaned_data
+            profile.phone = profile_cd['phone']
+            profile.birth = profile_cd['birth']
+            profile.bio = profile_cd['bio']
+
+            # 如果 request.FILES 存在文件，则保存
+            if 'avatar' in request.FILES:
+                profile.avatar = profile_cd["avatar"]
+            profile.save()
+            return redirect(reverse('qxauth:edit_profile', kwargs={'user_id': user_id}))
+        else:
+            return HttpResponse('输入内容有误，请重新填写 ~ 喵')
+
+    elif request.method == 'GET':
+        profile_form = ProfileForm()
+        context = {
+            'profile_form': profile_form,
+            'profile': profile,
+            'user': user
+        }
+        return render(request, 'edit.html',context=context)

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,6 +65,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'qxauth.context_processors.avatar_context',
             ],
             # 这里加载
             'builtins':['django.templatetags.static']
@@ -134,8 +136,6 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.qq.com'  # 邮件类型
@@ -143,3 +143,8 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = '1768248496@qq.com'
 EMAIL_HOST_PASSWORD = 'tphttsmmhlruifai'  # 授权码
 DEFAULT_FROM_EMAIL = '1768248496@qq.com'  # 默认发送邮件
+
+
+# 媒体文件地址
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')

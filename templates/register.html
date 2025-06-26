@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}注册博客{% endblock %} 
+{% block title %}注册博客{% endblock %}
 
 {% block head %}
     <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
@@ -24,6 +24,10 @@
                 <div class="mb-2">
                     <label>密码</label>
                     <input type="password" name="password" class="form-control" placeholder="请输入密码">
+                </div>
+                <div class="mb-2">
+                    <label>重复密码</label>
+                    <input type="password" name="password2" class="form-control" placeholder="请重复输入密码">
                 </div>
                 <div class="mb-2">
                     <label>验证码</label>
