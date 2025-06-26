@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}博客详情页{% endblock %}
 
+{% block head %}
+    <link rel="stylesheet" href="{% static 'highlight/styles/default.min.css' %}">
+    <script src="{% static 'highlight/highlight.min.js' %}"></script>
+{% endblock %}
 {% block main %}
     <h1>{{ blog.title }}</h1>
     <hr>
@@ -43,4 +47,7 @@
             {% endfor %}
         </ul>
     </div>
+    <script>
+        hljs.highlightAll();
+    </script>
 {% endblock %}
