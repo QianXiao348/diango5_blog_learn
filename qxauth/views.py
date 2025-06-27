@@ -47,7 +47,7 @@ def qxlogout(request):
 @require_http_methods(['GET', 'POST'])
 def register(request):
     if request.method == 'GET':
-        return render(request, 'register.html')
+        return render(request, 'registration/register.html')
     else:
         form = RegisterForm(request.POST)
         if form.is_valid():
@@ -93,7 +93,7 @@ def edit_profile(request, user_id):
             return HttpResponse('您没有权限修改此用户信息~ 喵！')
 
         # 上传的文件保存在 request.FILES 中，通过参数传递给表单类
-        profile_form = ProfileForm(request.POST, request.FILES)
+        profile_form = ProfileForm(request.POST, request.FILES, instance=profile)
 
         if profile_form.is_valid():
             # 取得清洗后的合法数据
@@ -111,7 +111,8 @@ def edit_profile(request, user_id):
             return HttpResponse('输入内容有误，请重新填写 ~ 喵')
 
     elif request.method == 'GET':
-        profile_form = ProfileForm()
+        #  通过 profile 的实例获取表单数据
+        profile_form = ProfileForm(instance=profile)
         context = {
             'profile_form': profile_form,
             'profile': profile,

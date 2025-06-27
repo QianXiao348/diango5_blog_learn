@@ -16,7 +16,7 @@
                 </div>
                 <div class="card-footer text-body-secondary d-flex justify-content-between">
                     <div>
-                        <img src="{% static 'image/sv.jpg' %}" class="rounded-circle" width="30" alt="">{{ blog.author.username }}
+                        <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle" width="30" alt="">{{ blog.author.username }}
                     </div>
                     <div>
                         发布时间：{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}

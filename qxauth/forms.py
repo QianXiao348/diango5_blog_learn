@@ -73,6 +73,23 @@ class LoginForm(forms.Form):
 
 
 class ProfileForm(forms.ModelForm):
+    phone = forms.CharField(
+        max_length=11,
+        required=False,
+        error_messages={
+            'max_length': '手机号不能超过11位',
+        }
+    )
     class Meta:
         model = Profile
         fields = ['phone','birth','avatar','bio']
+        widgets = {
+            'birth': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone:
+            if len(phone) != 11:  # 同时检查是否为 11 位
+                raise forms.ValidationError('手机号必须是11位数字')
+        return phone

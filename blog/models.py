@@ -9,6 +9,7 @@ class BlogCategory(models.Model):
         verbose_name = '博客分类'
         verbose_name_plural = verbose_name
 
+# 博客
 class Blog(models.Model):
     title = models.CharField(max_length=200, verbose_name='标题')
     content = models.TextField(verbose_name='内容')
@@ -21,6 +22,7 @@ class Blog(models.Model):
         verbose_name_plural = verbose_name
         ordering = ['-pub_time']
 
+# 评论
 class BlogComment(models.Model):
     content = models.TextField(verbose_name='内容')
     pub_time = models.DateTimeField(auto_now_add=True, verbose_name='评论时间')

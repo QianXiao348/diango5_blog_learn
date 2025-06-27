@@ -16,7 +16,7 @@ def blog_detail(request, blog_id):
         blog = Blog.objects.get(pk=blog_id)
     except Exception as e:
         return render(request, '404.html')
-    return render(request, 'blog_detail.html', context={'blog': blog})
+    return render(request, 'article/blog_detail.html', context={'blog': blog})
 
 # 发布博客
 @require_http_methods(['GET', 'POST'])
@@ -24,7 +24,7 @@ def blog_detail(request, blog_id):
 def pub_blog(request):
     if request.method == 'GET':
         categories = BlogCategory.objects.all()
-        return render(request, 'pub_blog.html', context={'categories': categories})
+        return render(request, 'article/pub_blog.html', context={'categories': categories})
     else:
         form = PubBlogForm(request.POST)
         if form.is_valid():

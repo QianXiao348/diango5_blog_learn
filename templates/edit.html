@@ -30,7 +30,7 @@
                     </div>
                     <div class="form-group col-md-4">
                     <label for="birth">出生年月日</label>
-                    <input type="date" class="form-control" id="birth" name="birth" value="{{ profile.birth }}">
+                    <input type="date" class="form-control" id="birth" name="birth" value="{{ profile.birth|date:'Y-m-d'}}">
             </div>
             <!-- bio -->
             <div class="form-group col-md-4">
@@ -38,6 +38,7 @@
                 <!-- 文本区域 -->
                 <textarea type="text" class="form-control" id="bio" name="bio" rows="12">{{ profile.bio }}</textarea>
             </div>
+            <a href="{% url 'qxauth:password_change' %}" class="btn btn-link">修改密码</a>
             <!-- 提交按钮 -->
             <button type="submit" class="btn btn-primary">提交</button>
             </form>
