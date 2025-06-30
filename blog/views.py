@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import get_object_or_404, render, redirect, reverse
 from django.http.response import JsonResponse
 from django.urls.base import reverse_lazy
 from django.contrib.auth.decorators import login_required
@@ -6,6 +6,8 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 from .models import BlogCategory, Blog, BlogComment
 from .forms import PubBlogForm
 from django.db.models import Q
+from django.http import HttpResponseForbidden
+
 
 def index(request):
     blogs = Blog.objects.all()
@@ -55,3 +57,14 @@ def search(request):
     # 从博客标题和内容进行查找
     blogs = Blog.objects.filter(Q(title__icontains=q)|Q(content__icontains=q)).all()
     return render(request, 'index.html', context={'blogs': blogs})
+
+# 删除博客
+@login_required(login_url=reverse_lazy('qxauth:login'))
+def delete_blog(request, blog_id):
+    blog = get_object_or_404(Blog, id=blog_id)
+    if not request.user.is_superuser and blog.author != request.user:
+        return HttpResponseForbidden('你不是管理员或博主！没有权限删除博客！')
+    if request.method == 'POST':
+        blog.delete()
+        return redirect(reverse('blog:index'))
+    return render(request, 'article/delete_confirm.html', context={'blog': blog})
