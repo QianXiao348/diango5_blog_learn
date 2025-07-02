@@ -1,0 +1,46 @@
+{% load static %}
+
+<li class="list-group-item comment-item" id="comment-{{ comment.id }}" style="
+        --comment-indent: {% widthratio comment.level 1 20 %}px; 
+        --comment-border: {% if comment.level > 0 %} 2px solid #ddd{% else %} none {% endif %};
+        --comment-padding-left: {% if comment.level > 0 %}10px{% else %}0px{% endif %};
+    ">
+
+    <div class="d-flex justify-content-between text-body-secondary mb-2">
+        <div class="user-info d-flex align-items-center">
+            <img src="{% if comment.author.profile.avatar %}{{ comment.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
+                class="rounded-circle" width="40" height="40" alt="{{ comment.author.username }}的头像">
+            <span class="ms-2 fw-bold">{{ comment.author.username }}</span>
+            {% comment %} 如果是回复，并且你想显示回复给谁 {% endcomment %}
+            {% if comment.parent and comment.parent.author %}
+            <span class="ms-1">回复</span>
+            <span class="ms-1 text-primary fw-bold">{{ comment.parent.author.username }}</span>
+            {% endif %}
+        </div>
+        <div class="create-time" style="font-size: 0.9em;">
+            {{ comment.pub_time|date:'Y年m月d日 H时i分s秒'}}
+        </div>
+    </div>
+    <div class="comment-content mb-2">{{ comment.content|linebreaksbr }}</div>
+
+    <div class="comment-actions">
+        {% if request.user.is_authenticated %}
+        <button class="reply-button btn btn-sm btn-outline-info" data-comment-id="{{ comment.id }}">回复</button>
+        {% endif %}
+
+        {% if request.user == comment.author or request.user.is_superuser or request.user == comment.blog.author %}
+        <form action="{% url 'blog:delete_comment' comment.id %}" method="post" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div id="reply-form-{{ comment.id }}" class="reply-form bg-light p-3 rounded mt-2">
+        <form method="post" action="{% url 'blog:comment_reply' blog.id comment.id %}">
+            {% csrf_token %}
+            {{ comment_form.as_p }}
+            <button type="submit" class="btn btn-primary btn-sm mt-2">提交回复</button>
+        </form>
+    </div>
+</li>

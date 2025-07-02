@@ -4,7 +4,32 @@
 {% block head %}
 <link rel="stylesheet" href="{% static 'highlight/styles/default.min.css' %}">
 <script src="{% static 'highlight/highlight.min.js' %}"></script>
+<style>
+    /* 评论项的基础样式 */
+    .comment-item {
+        border: 1px solid #eee;
+        padding: 10px;
+        margin-bottom: 10px;
+        margin-left: var(--comment-indent, 0px); 
+        border-left: var(--comment-border, none);
+        padding-left: var(--comment-padding-left, 0px);
+    }
+    /* 回复表单的默认隐藏 */
+    .reply-form {
+        margin-top: 5px;
+        margin-bottom: 10px;
+        display: none; /* 关键：默认隐藏 */
+    }
+    /* 头像样式 */
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+</style>
 {% endblock %}
+
 {% block main %}
 <h1>{{ blog.title }}</h1>
 <hr>
@@ -29,7 +54,7 @@
 
 <div class="mt-2">
     <h3>评论（{{ blog.comments.all|length }}）：</h3>
-    <form action="{% url 'blog:pub_comment' %}" method="post">
+    <form action="{% url 'blog:pub_comment' blog.id %}" method="post">
         {% csrf_token %}
         <input type="hidden" name="blog_id" , value="{{ blog.id }}">
         <div class="mt-2">
@@ -42,26 +67,24 @@
 </div>
 <div class="mt-2">
     <ul class="list-group list-group-flush">
-        {% for comment in blog.comments.all %}
-        {# 将整个评论内容放在一个 div 中，并加上 list-group-item 类，模拟列表项 #}
-        <div class="list-group-item">
-            <div class="d-flex justify-content-between text-body-secondary">
-                <div class="user-info d-flex align-items-center"> {# 加上 d-flex align-items-center 使头像和名字垂直居中 #}
-                    {# 获取评论作者的头像，使用和 base.html 相同的逻辑来处理默认头像 #}
-                    <img src="{% if comment.author.profile.avatar %}{{ comment.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
-                        class="rounded-circle" width="40" height="40" alt="{{ comment.author.username }}的头像">
-                    <span class="ms-2">{{ comment.author.username }}</span> {# 修正拼写：username #}
-                </div>
-                <div class="create-time" style="line-height: 40px; font-size: 15px">
-                    {{ comment.pub_time|date:'Y年m月d日 H时i分s秒'}}
-                </div>
-            </div>
-            <div class="mt-2">{{ comment.content }}</div>
-        </div> {# 结束 list-group-item div #}
+         {% for comment in comments %} 
+        {% include 'article/_comment.html' with comment=comment comment_form=comment_form %}
+        {% empty %} {# 如果没有评论，显示此消息 #}
+            <li class="list-group-item text-center text-muted">目前还没有评论。</li>
         {% endfor %}
     </ul>
 </div>
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script>
     hljs.highlightAll();
+     $(document).ready(function() {
+        // 点击“回复”按钮显示/隐藏回复表单
+        $('.reply-button').on('click', function() {
+            var commentId = $(this).data('comment-id'); // 获取当前评论的ID
+            var $replyForm = $('#reply-form-' + commentId); // 找到对应的回复表单
+            $replyForm.toggle(); // 关键：切换显示/隐藏状态
+            $replyForm.find('textarea').focus(); // 聚焦输入框
+        });
+    });
 </script>
 {% endblock %}

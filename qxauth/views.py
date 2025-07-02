@@ -19,7 +19,7 @@ User = get_user_model()
 @require_http_methods(['GET', 'POST'])
 def qxlogin(request):
     if request.method == 'GET':
-        return render(request, 'login.html')
+        return render(request, 'registration/login.html')
     else:
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -118,4 +118,4 @@ def edit_profile(request, user_id):
             'profile': profile,
             'user': user
         }
-        return render(request, 'edit.html',context=context)
+        return render(request, 'registration/edit.html',context=context)
