@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import CaptchaModel, Profile
+from .models import Profile
+from django.core.cache import cache
 
 User = get_user_model()  #  使用Django自带的用户类
 
@@ -50,11 +51,11 @@ class RegisterForm(forms.Form):
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
         email = self.cleaned_data.get('email') 
-        
-        captcha_model = CaptchaModel.objects.filter(email=email, captcha=captcha).first()
-        if not captcha_model:
-            raise forms.ValidationError('验证码错误！')
-        captcha_model.delete()  #  删除验证码
+    
+        real_captcha = cache.get(email)
+        if not real_captcha or real_captcha != captcha:
+            raise forms.ValidationError('验证码错误或已过期！')
+        cache.delete(f'email_captcha:{email}') 
         return captcha
         
 

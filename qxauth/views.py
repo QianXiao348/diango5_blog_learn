@@ -3,6 +3,7 @@ from django.http.response import JsonResponse
 import string
 import random
 from django.http import HttpResponse
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.views.decorators.http import require_http_methods
 from .forms import RegisterForm, LoginForm, ProfileForm
@@ -10,7 +11,7 @@ from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import User
 from django.urls.base import reverse_lazy
 from django.contrib.auth.decorators import login_required
-from .models import Profile,CaptchaModel
+from .models import Profile
 
 
 User = get_user_model()
@@ -35,7 +36,7 @@ def qxlogin(request):
                 return redirect('/')  # 登录成功后跳转到首页
             else:
                 print("邮箱或密码错误！")
-                return HttpResponse("注册输入有误。请再次检查输入邮箱或密码是否符合标准，并重新输入~")
+                return JsonResponse({'code':401,"message":"注册输入有误。请再次检查输入邮箱或密码是否符合标准，并重新输入~"})
                 # return redirect(reverse('qxauth:login'))
 
 # 用户登出
@@ -50,6 +51,15 @@ def register(request):
         return render(request, 'registration/register.html')
     else:
         form = RegisterForm(request.POST)
+        input_code = request.POST.get('captcha') # 前端表单中用户输入的验证码
+        email = request.POST.get('email')
+        
+        redis_code = cache.get(email)
+        # print(redis_code)
+        # print(input_code)
+        if not redis_code or input_code != redis_code:
+            return HttpResponse("验证码无效或已过期，请重新获取~")
+        
         if form.is_valid():
             email = form.cleaned_data.get('email')
             username = form.cleaned_data.get('username')
@@ -71,9 +81,17 @@ def send_email_captcha(request):
         return JsonResponse({"code":400, "message":'必须传递邮件！'})
     # 生成验证码（取随机前4位阿拉伯数字） [0,3,2,5...]
     captcha = ''.join(random.sample(string.digits, 6))
-    # 存储到数据库中（后续应该存储在缓存中）
-    CaptchaModel.objects.update_or_create(email=email, defaults={'captcha': captcha})
-    send_mail("博客注册验证码", message=f'您的验证码是：{captcha}', recipient_list=[email], from_email=None)
+
+    # 存入 Redis，设置过期时间为 5 分钟（300 秒）
+    cache.set(email, captcha, 300)
+    
+    send_mail(
+        "博客注册验证码",
+        message=f'您的验证码是：{captcha}，5分钟内有效~喵', 
+        recipient_list=[email],
+        from_email=None, # 这个参数不能少
+        fail_silently=False)
+    
     return JsonResponse({"code":200, "message": "邮箱验证码发送成功！"})
 
 # 修改用户信息

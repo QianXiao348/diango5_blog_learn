@@ -29,11 +29,15 @@ class BlogComment(MPTTModel):
     pub_time = models.DateTimeField(auto_now_add=True, verbose_name='评论时间')
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='comments', verbose_name='所属博客')
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='评论的作者')
-    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
-    reply_to = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='replyers')
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children', verbose_name='回复的评论')
+    reply_to = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='replyers', verbose_name='回复的作者')
     
     class MPTTMeta:
         order_insertion_by = ['-pub_time']
+    
+    class Meta:
+        verbose_name = '博客评论'
+        verbose_name_plural = verbose_name
         
     def __str__(self):
         return self.content[:20]
