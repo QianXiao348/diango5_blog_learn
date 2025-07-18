@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'blog',
     'qxauth',
-    'mptt'
+    # 树形结构
+    'mptt',
 ]
 
 MIDDLEWARE = [

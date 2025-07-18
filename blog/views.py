@@ -7,10 +7,19 @@ from .models import BlogCategory, Blog, BlogComment
 from .forms import PubBlogForm, PubCommentForm
 from django.db.models import Q
 from django.http import HttpResponseForbidden
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
-# 首页
+# （首页）博客的分页
 def index(request):
-    blogs = Blog.objects.all()
+    blog_list = Blog.objects.all().order_by('-pub_time')
+    
+    # 实例化 Paginator，每页显示 6 篇文章
+    paginator = Paginator(blog_list,6)
+    
+    # 获取当前的页码
+    page = request.GET.get('page')
+    blogs = paginator.get_page(page)
+    
     return render(request, 'registration/index.html', context={'blogs': blogs})
 
 # 博客详情
@@ -24,26 +33,56 @@ def blog_detail(request, blog_id):
         'comments': comments, # 将已排序的评论列表传递给模板
         'comment_form': comment_form, # 将评论表单传递给模板
     }
-    return render(request, 'article/blog_detail.html', context)
+    return render(request, 'article/blog_detail.html', context=context)
 
+# 编辑博客
+@require_http_methods(['GET', 'POST'])
+@login_required(login_url=reverse_lazy('qxauth:login'))
+def edit_blog(request, blog_id):
+    blog = get_object_or_404(Blog, id=blog_id)
+    if not request.user.is_authenticated or request.user != blog.author:
+        return HttpResponseForbidden('你没有权限修改此博客')
+    
+    if request.method == 'GET':
+        # 显示欲填充博客编辑页面
+        categories = BlogCategory.objects.all()
+        form = PubBlogForm(instance=blog)
+        context = {
+            'form': form,
+            'categories': categories,
+            'blog': blog
+        }
+        return render(request, 'article/edit_blog.html', context=context)
+    else:
+        form = PubBlogForm(request.POST, instance=blog) # instance 绑定数据
+        if form.is_valid():
+            blog = form.save()
+            return JsonResponse({'code': 200, 'msg': '博客更新成功！', 'data': {'blog_id': blog.id}})
+        else:
+            print(form.errors)
+            return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
+        
 # 发布博客
 @require_http_methods(['GET', 'POST'])
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def pub_blog(request):
     if request.method == 'GET':
         categories = BlogCategory.objects.all()
-        return render(request, 'article/pub_blog.html', context={'categories': categories})
-    else:
+        form = PubBlogForm() # GET 请求时，初始化一个空的表单
+        return render(request, 'article/pub_blog.html', context={'categories': categories, 'form': form})
+    else: # POST 请求
         form = PubBlogForm(request.POST)
         if form.is_valid():
-            title = form.cleaned_data.get('title')
-            content = form.cleaned_data.get('content')
-            category_id = form.cleaned_data.get('category')
-            blog = Blog.objects.create(title=title, content=content, author=request.user, category_id=category_id)
+            # 使用 form.save(commit=False) 获取模型实例，但不立即保存到数据库
+            blog = form.save(commit=False)
+            blog.author = request.user # 设置作者为当前登录用户
+
+            blog.save() # 现在，将完整的博客实例保存到数据库
+            
             return JsonResponse({'code': 200, 'msg': '发布成功！', 'data': {'blog_id': blog.id}})
         else:
             print(form.errors)
-            return JsonResponse({'code': 400, 'msg': '参数错误！'})
+            return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
 
 # 发布评论
 @require_http_methods(['POST'])
@@ -82,6 +121,7 @@ def pub_comment(request, blog_id, parent_comment_id=None):
 @require_POST
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def delete_comment(request, comment_id):
+    # 获取评论
     comment = get_object_or_404(BlogComment, id=comment_id)
     if not request.user.is_superuser and comment.author != request.user:
         return JsonResponse({'code': 403, 'msg': '你没有权限删除此评论！'})

@@ -1,11 +1,23 @@
 from django import forms
-from .models import BlogComment
+from .models import Blog, BlogComment, BlogCategory
+
 
 # 发表博客
-class PubBlogForm(forms.Form):
-    title = forms.CharField(max_length=200, min_length=2)
-    content = forms.CharField(min_length=2)
-    category = forms.IntegerField()
+class PubBlogForm(forms.ModelForm):
+    class Meta:
+        model = Blog 
+        fields = ['title', 'content', 'category'] 
+
+        # 可选：为字段添加样式和占位符，如果你的模型字段是 RichTextField，内容这里可能需要特定的widget
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '请输入标题'}),
+            'category': forms.Select(attrs={'class': 'form-select'}), # 下拉选择框
+        }
+        labels = {
+            'title': '标题',
+            'content': '内容',
+            'category': '分类',
+        }
 
 
 class PubCommentForm(forms.ModelForm):

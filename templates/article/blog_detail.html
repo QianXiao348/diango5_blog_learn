@@ -45,14 +45,18 @@
 <div class="py-2">
     {{ blog.content|safe }}
 </div>
-{% if user.is_superuser or user == blog.author %}
-<div class="d-flex justify-content-end align-items-end mt-auto p-2"> <a href="{% url 'blog:delete_blog' blog.id %}"
-        class="btn btn-danger">删除</a>
-</div>
-{% endif %}
 <hr>
 
-<div class="mt-2">
+{% if request.user.is_authenticated %}
+    {% if request.user == blog.author or request.user.is_superuser %}
+        <div class="mt-2">
+            <a href="{% url 'blog:edit_blog' blog_id=blog.id %}" class="btn btn-warning">编辑博客</a>
+            <a href="{% url 'blog:delete_blog' blog_id=blog.id %}" class="btn btn-danger ms-2">删除博客</a>
+        </div>
+    {% endif %}
+{% endif %}
+
+<div class="mt-4">
     <h3>评论（{{ blog.comments.all|length }}）：</h3>
     <form action="{% url 'blog:pub_comment' blog.id %}" method="post">
         {% csrf_token %}

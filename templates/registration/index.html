@@ -4,26 +4,79 @@
 
 {% block main %}
     <h1>博客列表</h1>
-    <div class="row row-cols-2 row-gap-4">
-    {% for blog in blogs %}
-        <div class="col">
-            <div class="card">
-                <div class="card-header">
-                    <a href="{% url 'blog:blog_detail' blog_id=blog.id %}">{{ blog.title }}</a>
-                </div>
-                <div class="card-body" style="height: 120px;">
-                    <p class="card-text">{{ blog.content|striptags|truncatechars:100 }}</p>
-                </div>
-                <div class="card-footer text-body-secondary d-flex justify-content-between">
-                    <div>
-                        <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle" width="30" alt="">{{ blog.author.username }}
+    <div class="row row-cols-1 row-cols-md-2 g-4"> {# 调整为 Bootstrap 5 的 g-4 来控制间距 #}
+        {% for blog in blogs %}
+            <div class="col">
+                <div class="card h-100"> {# 添加 h-100 让卡片高度一致 #}
+                    <div class="card-header">
+                        <a href="{% url 'blog:blog_detail' blog_id=blog.id %}" class="text-decoration-none text-dark fw-bold">{{ blog.title|striptags|truncatechars:40 }}</a>
                     </div>
-                    <div>
-                        发布时间：{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}
+                    <div class="card-body"> {# 移除 style="height: 120px;" 让内容自适应 #}
+                        <p class="card-text">{{ blog.content|striptags|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer text-body-secondary d-flex justify-content-between align-items-center"> {# 添加 align-items-center 垂直居中 #}
+                        <div>
+                            <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle me-2" width="30" height="30" alt="作者头像">{{ blog.author.username }}
+                        </div>
+                        <div class="text-end"> {# 添加 text-end 让时间靠右 #}
+                            发布时间：{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    {% endfor %}
+        {% empty %}
+            <div class="col-12">
+                <p class="text-center">暂无博客文章。</p>
+            </div>
+        {% endfor %}
     </div>
+
+    {# --- 分页导航 --- #}
+    {% if blogs.paginator.num_pages > 1 %} {# 只有当总页数大于1时才显示分页 #}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center"> {# 使用 Bootstrap 的分页样式并居中 #}
+            {# 如果有上一页 #}
+            {% if blogs.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo; 第一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo; 第一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {# 显示当前页码和总页数 #}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">
+                    {{ blogs.number }} / {{ blogs.paginator.num_pages }}
+                </span>
+            </li>
+
+            {# 如果有下一页 #}
+            {% if blogs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">最后一页 &raquo;</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">最后一页 &raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
 {% endblock %}
