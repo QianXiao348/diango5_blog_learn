@@ -9,6 +9,8 @@ urlpatterns = [
     path('blog/detail/<int:blog_id>', views.blog_detail, name='blog_detail'),
     # 发表博客
     path('blog/pub', views.pub_blog, name='pub_blog'),
+    # 上传图片
+    path('blog/update_image', views.get_image_for_blog, name='get_image_for_blog'),
     # 处理一级回复
     path('blog/comment/<int:blog_id>/', views.pub_comment, name='pub_comment'),
     # 处理二级回复

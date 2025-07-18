@@ -7,8 +7,11 @@ from .models import BlogCategory, Blog, BlogComment
 from .forms import PubBlogForm, PubCommentForm
 from django.db.models import Q
 from django.http import HttpResponseForbidden
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.paginator import Paginator
+from django.core.files.storage import default_storage
+import datetime
 
+from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
 # （首页）博客的分页
 def index(request):
     blog_list = Blog.objects.all().order_by('-pub_time')
@@ -34,6 +37,28 @@ def blog_detail(request, blog_id):
         'comment_form': comment_form, # 将评论表单传递给模板
     }
     return render(request, 'article/blog_detail.html', context=context)
+
+# 图片上传
+@csrf_exempt
+@require_POST
+def get_image_for_blog(request):
+    if request.FILES.get('image_file'):
+        image_file = request.FILES.get('image_file')
+        # 构造保存路径，按日期+文件名保存
+        today = datetime.datetime.now().strftime('%Y%m%d')
+        file_name = default_storage.save(f'articles/{today}/{image_file.name}', image_file)
+        # 获取完整可访问的 URL
+        file_url = default_storage.url(file_name)
+        return JsonResponse({
+                    "errno": 0,  # 表示无错误（errno 为 0）
+                    "data": {
+                        "url": file_url,        # 图片上传成功后的访问地址
+                        "alt": image_file.name, # 图片名称
+                        "href": file_url        # 图片点击后跳转的地址（通常与 url 相同）
+                    }
+                })
+    # 如果没有收到文件或请求方法不对
+    return JsonResponse({"errno": 1, "message": "图片上传失败"})
 
 # 编辑博客
 @require_http_methods(['GET', 'POST'])

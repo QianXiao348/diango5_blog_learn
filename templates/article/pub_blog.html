@@ -4,6 +4,12 @@
     <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
     <link rel="stylesheet" href="{% static 'wangeditor/style.css' %}">
     <script src="{% static 'wangeditor/index.js' %}"></script>
+    <script>
+        // 将变量定义到 window 对象上，使其全局可访问
+        window.uploadImageUrl = "{% url 'blog:get_image_for_blog' %}"; 
+        window.blogDetailUrlTemplate = "{% url 'blog:blog_detail' blog_id=0 %}"; 
+    </script>
+
     <script src="{% static 'js/pub_blog.js' %}"></script>
     <style>
         #editor—wrapper {
@@ -45,9 +51,10 @@
                     <div id="toolbar-container"><!-- 工具栏 --></div>
                     <div id="editor-container"><!-- 编辑器 --></div>
                 </div>
+                <textarea name="content" id="editor-content-textarea" style="display: none;"></textarea> 
             </div>
             <div class="mb-3 text-end">
-                <button type="button" class="btn btn-warning" id="submit-btn">发布</button>
+                <button type="button" class="btn btn-warning" id="submit-btn"  data-redirect-url="{% url 'blog:blog_detail' blog_id=0 %}">发布</button>
             </div>
         </form>
     </div>

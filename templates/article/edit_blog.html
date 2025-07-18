@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="{% static 'wangeditor/style.css' %}">
     <script src="{% static 'wangeditor/index.js' %}"></script>
     {# 如果 pub_blog.js 包含 wangEditor 初始化逻辑，你可能需要重用或复制 #}
+    <script>
+        window.uploadImageUrl = "{% url 'blog:get_image_for_blog' %}"; // 定义图片上传 URL
+    </script>
     {# 这里我们假设你的 wangEditor 初始化逻辑将在 edit_blog.js 中 #}
     <script src="{% static 'js/edit_blog.js' %}"></script> 
     <style>

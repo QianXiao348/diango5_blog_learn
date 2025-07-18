@@ -11,6 +11,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // 将编辑器内容同步到隐藏的textarea
             const html = editor.getHtml();
             document.getElementById('editor-content-textarea').value = html;
+        },
+        // 配置上传图片的接口
+        MENU_CONF: {
+            uploadImage: {
+                server: uploadImageUrl, 
+                fieldName: 'image_file', 
+                headers: {
+                    'X-CSRFToken': $("input[name='csrfmiddlewaretoken']").val(), // 从隐藏的 CSRF input 获取
+                },
+            }
         }
     };
 
