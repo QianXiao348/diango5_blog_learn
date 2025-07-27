@@ -12,6 +12,8 @@ from django.core.files.storage import default_storage
 import datetime
 
 from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
+
+from .moderation import moderate_comment_content
 # （首页）博客的分页
 def index(request):
     blog_list = Blog.objects.all().order_by('-pub_time')
@@ -25,21 +27,25 @@ def index(request):
     
     return render(request, 'registration/index.html', context={'blogs': blogs})
 
-# 博客详情
 def blog_detail(request, blog_id):
     blog = get_object_or_404(Blog, id=blog_id)
-    # mptt 会根据 tree_id 和 lft 字段自动排序，以保证正确的树形结构
-    comments = BlogComment.objects.filter(blog=blog).order_by('tree_id', 'lft')
-    comment_form = PubCommentForm() # 初始化一个空的评论表单
+    
+    # 只获取顶级评论 (parent__isnull=True 或者 level=0) 
+    # MPTT 模型的 root_nodes() 方法也能获取所有根节点
+    # comments = BlogComment.objects.filter(blog=blog).get_root_nodes().order_by('tree_id', 'lft')
+    # 或者直接过滤 parent 字段
+    comments = BlogComment.objects.filter(blog=blog, parent__isnull=True).order_by('tree_id', 'lft')
+    
+    comment_form = PubCommentForm()
     context = {
         'blog': blog,
-        'comments': comments, # 将已排序的评论列表传递给模板
-        'comment_form': comment_form, # 将评论表单传递给模板
+        'comments': comments, # 现在这里只包含顶级评论
+        'comment_form': comment_form,
     }
     return render(request, 'article/blog_detail.html', context=context)
 
 # 图片上传
-@csrf_exempt
+# @csrf_exempt
 @require_POST
 def get_image_for_blog(request):
     if request.FILES.get('image_file'):
@@ -65,7 +71,7 @@ def get_image_for_blog(request):
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def edit_blog(request, blog_id):
     blog = get_object_or_404(Blog, id=blog_id)
-    if not request.user.is_authenticated or request.user != blog.author:
+    if not request.user.is_authenticated and request.user != blog.author:
         return HttpResponseForbidden('你没有权限修改此博客')
     
     if request.method == 'GET':
@@ -110,37 +116,40 @@ def pub_blog(request):
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
 
 # 发布评论
-@require_http_methods(['POST'])
+@require_POST
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def pub_comment(request, blog_id, parent_comment_id=None):
     blog = get_object_or_404(Blog, id=blog_id)
-    comment_form = PubCommentForm()
-    if request.method == 'POST':
-        comment_form = PubCommentForm(request.POST)
-        if comment_form.is_valid():
-            new_comment = comment_form.save(commit=False)
-            new_comment.blog = blog
-            new_comment.author = request.user
-            # 二级回复
-            if parent_comment_id:
-                try:
-                    # 获取父级评论
-                    parent_comment = BlogComment.objects.get(id=parent_comment_id)
-                    # 将新评论的 parent 字段设置为父评论实例
-                    new_comment.parent = parent_comment
-                    new_comment.reply_to = parent_comment.author 
-                except BlogComment.DoesNotExist:
-                    # 如果提供的父评论ID无效，则将其作为顶级评论处理
-                    new_comment.parent = None
-            new_comment.save()
-            return redirect(reverse('blog:blog_detail', args=[blog.id]) + f'#comment-{new_comment.id}')
-        else:
-            context = {
-                'blog': blog,
-                'comment_form': comment_form,
-                'parent_comment_id': parent_comment_id
-            }
-            return render(request, 'article/blog_detail.html', context=context)
+    form = PubCommentForm(request.POST)
+
+    if not form.is_valid():
+        return JsonResponse({'code': 400, 'msg': '评论内容无效', 'errors': form.errors})
+
+    content = form.cleaned_data.get('content')
+    is_safe, moderation_msg = moderate_comment_content(content)
+    if not is_safe:
+        return JsonResponse({'code': 400, 'msg': f'用语不规范：{moderation_msg}'})
+
+    parent_comment_id = request.POST.get('parent_comment_id')
+    reply_to_user_id = request.POST.get('reply_to_user_id')
+
+    new_comment = form.save(commit=False)
+    new_comment.blog = blog
+    new_comment.author = request.user
+
+    if parent_comment_id:
+        try:
+            parent_comment = BlogComment.objects.get(id=parent_comment_id)
+            new_comment.parent = parent_comment
+            if reply_to_user_id:
+                new_comment.reply_to_id = reply_to_user_id
+        except BlogComment.DoesNotExist:
+            pass  # 忽略错误，作为顶级评论处理
+
+    new_comment.save()
+
+    return JsonResponse({'code': 200, 'msg': '评论成功', 'comment_id': new_comment.id})
+
 
 # 删除评论
 @require_POST
@@ -148,10 +157,18 @@ def pub_comment(request, blog_id, parent_comment_id=None):
 def delete_comment(request, comment_id):
     # 获取评论
     comment = get_object_or_404(BlogComment, id=comment_id)
+
+    # 权限检查：只有评论作者或超级用户才能删除
     if not request.user.is_superuser and comment.author != request.user:
         return JsonResponse({'code': 403, 'msg': '你没有权限删除此评论！'})
-    comment.delete()
-    return redirect(reverse('blog:blog_detail', args=[comment.blog.id]))
+
+    try:
+        comment.delete()
+        # 成功删除后返回 JSON 响应
+        return JsonResponse({'code': 200, 'msg': '评论删除成功！'})
+    except Exception as e:
+        # 捕获删除时的异常，例如数据库错误
+        return JsonResponse({'code': 500, 'msg': f'删除评论失败：{e}'})
 
 # 查找视图函数
 @require_GET

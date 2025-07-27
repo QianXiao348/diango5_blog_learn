@@ -1,3 +1,4 @@
+{# article/blog_detail.html #}
 {% extends 'base.html' %}
 {% block title %}博客详情页{% endblock %}
 
@@ -10,10 +11,18 @@
         border: 1px solid #eee;
         padding: 10px;
         margin-bottom: 10px;
-        margin-left: var(--comment-indent, 0px); 
-        border-left: var(--comment-border, none);
-        padding-left: var(--comment-padding-left, 0px);
+        /* 请确保这里没有使用 mul 过滤器，通过 _comment.html 中的 class 来控制缩进 */
+        /* margin-left: var(--comment-indent, 0px);  */
+        /* border-left: var(--comment-border, none); */
+        /* padding-left: var(--comment-padding-left, 0px); */
+        background-color: #f9f9f9; /* 建议添加，让层级更清晰 */
+        border-radius: 5px; /* 建议添加 */
     }
+    /* 评论缩进 (在 base.css 或这里定义) */
+    .comment-level-0 { margin-left: 0px; border-left: 3px solid #007bff; padding-left: 17px; }
+    .comment-level-1 { margin-left: 20px; border-left: 3px solid #28a745; padding-left: 17px; }
+    .comment-level-2 { margin-left: 40px; border-left: 3px solid #ffc107; padding-left: 17px; }
+    .comment-level-3 { margin-left: 60px; border-left: 3px solid #dc3545; padding-left: 17px; }
     /* 回复表单的默认隐藏 */
     .reply-form {
         margin-top: 5px;
@@ -26,6 +35,14 @@
         height: 40px;
         object-fit: cover;
         border-radius: 50%;
+    }
+    /* 博客内容中的图片样式 (如果未在 base.css 全局控制，这里可以加上) */
+    .blog-content img,
+    .w-e-text-container img { /* wangEditor 插入的图片 */
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
     }
 </style>
 {% endblock %}
@@ -58,36 +75,156 @@
 
 <div class="mt-4">
     <h3>评论（{{ blog.comments.all|length }}）：</h3>
-    <form action="{% url 'blog:pub_comment' blog.id %}" method="post">
+    <div id="comment-error-message" class="alert alert-danger" style="display:none;"></div> {# 错误提示区域 #}
+    <form id="comment-form" method="post" action="{% url 'blog:pub_comment' blog.id %}">
         {% csrf_token %}
-        <input type="hidden" name="blog_id" , value="{{ blog.id }}">
-        <div class="mt-2">
-            <input type="text" class="form-control" placeholder="请输入评论" name="content">
+        <div class="mb-3">
+            <label for="id_content" class="form-label">评论内容</label>
+            {{ comment_form.content }} 
         </div>
+        {# 隐藏的父评论和回复用户ID字段，用于二级回复 #}
+        <input type="hidden" name="parent_comment_id" id="parent-comment-id" value="">
+        <input type="hidden" name="reply_to_user_id" id="reply-to-user-id" value="">
+        
         <div class="text-end mt-2">
-            <button type="submit" class="btn btn-success">提交</button>
+            <button type="button" id="submit-comment-btn" class="btn btn-primary">发表评论</button>
         </div>
     </form>
 </div>
+
 <div class="mt-2">
     <ul class="list-group list-group-flush">
-         {% for comment in comments %} 
+        {% for comment in comments %} 
         {% include 'article/_comment.html' with comment=comment comment_form=comment_form %}
         {% empty %} {# 如果没有评论，显示此消息 #}
             <li class="list-group-item text-center text-muted">目前还没有评论。</li>
         {% endfor %}
     </ul>
 </div>
+
 <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
 <script>
-    hljs.highlightAll();
-     $(document).ready(function() {
-        // 点击“回复”按钮显示/隐藏回复表单
-        $('.reply-button').on('click', function() {
-            var commentId = $(this).data('comment-id'); // 获取当前评论的ID
-            var $replyForm = $('#reply-form-' + commentId); // 找到对应的回复表单
-            $replyForm.toggle(); // 关键：切换显示/隐藏状态
-            $replyForm.find('textarea').focus(); // 聚焦输入框
+    $(document).ready(function() {
+        hljs.highlightAll(); // 代码高亮，确保在DOM加载完成后调用
+
+        const blogId = {{ blog.id }}; 
+        const commentForm = $("#comment-form");
+        const submitCommentBtn = $("#submit-comment-btn");
+        const commentContentInput = $("#id_content"); 
+        const parentCommentIdInput = $("#parent-comment-id");
+        const replyToUserIdInput = $("#reply-to-user-id");
+        const commentErrorMessage = $("#comment-error-message"); 
+
+        // 处理二级回复按钮点击事件 (使用事件委托，确保对动态添加的评论也有效)
+        $(document).on('click', '.reply-button', function() {
+            const parentId = $(this).data('comment-id');
+            const authorName = $(this).data('author-name');
+            const authorId = $(this).data('author-id'); 
+
+            parentCommentIdInput.val(parentId);
+            replyToUserIdInput.val(authorId); 
+            
+            // 隐藏所有其他回复表单，避免多个表单同时显示
+            $('.reply-form').hide(); 
+            // 显示当前点击的评论下方的回复表单 (假设它在 _comment.html 中)
+            $('#reply-form-' + parentId).toggle();
+
+            commentContentInput.val(`回复 @${authorName} : `).focus();
+        });
+
+        // 提交评论按钮点击事件
+        submitCommentBtn.on('click', function(event) {
+            event.preventDefault(); // 阻止表单默认提交
+
+            const content = commentContentInput.val();
+            const parent_comment_id = parentCommentIdInput.val();
+            const reply_to_user_id = replyToUserIdInput.val();
+
+            if (!content.trim()) {
+                commentErrorMessage.text("评论内容不能为空！").show();
+                return;
+            } else {
+                commentErrorMessage.hide(); 
+            }
+
+            const csrfToken = $("input[name='csrfmiddlewaretoken']").val();
+            const postData = { 
+                content: content,
+                blog_id: blogId 
+            };
+            
+            if (parent_comment_id) {
+                postData.parent_comment_id = parent_comment_id;
+                if (reply_to_user_id) { 
+                    postData.reply_to_user_id = reply_to_user_id;
+                }
+            }
+            
+            $.ajax({
+                url: commentForm.attr('action'), 
+                method: 'POST',
+                data: postData, 
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    if (response.code === 200) {
+                        commentContentInput.val(''); 
+                        parentCommentIdInput.val(''); 
+                        replyToUserIdInput.val(''); 
+                        commentErrorMessage.hide(); 
+                        window.location.reload(); 
+                    } else {
+                        commentErrorMessage.text(response.msg).show(); 
+                        console.error("评论失败:", response.msg); 
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    let errorMsg = "网络或服务器错误，请重试。";
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
+                        errorMsg = jqXHR.responseJSON.msg; 
+                    } else if (jqXHR.responseText) {
+                        errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "..."; 
+                    }
+                    commentErrorMessage.text(errorMsg).show();
+                    console.error("评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                }
+            });
+        });
+        
+        // 删除评论按钮
+        $(document).on('click', '.delete-comment-btn', function() {
+            if (!confirm("确定要删除这条评论吗？")) {
+                return;
+            }
+            const commentId = $(this).data('comment-id');
+            const csrfToken = $("input[name='csrfmiddlewaretoken']").val();
+
+            $.ajax({
+                url: `/blog/comment/delete/${commentId}/`,
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                success: function(response) {
+                    if (response.code === 200) {
+                        window.location.reload(); 
+                    } else {
+                        // 统一错误提示方式，显示在页面内，不再弹 alert
+                        commentErrorMessage.text(response.msg).show(); 
+                        console.error("删除失败:", response.msg);
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    // 统一错误提示方式，显示在页面内，不再弹 alert
+                    let errorMsg = "网络或服务器错误，请重试。";
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
+                        errorMsg = jqXHR.responseJSON.msg; 
+                    } else if (jqXHR.responseText) {
+                        errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "..."; 
+                    }
+                    commentErrorMessage.text(errorMsg).show();
+                    console.error("删除评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                }
+            });
         });
     });
 </script>
