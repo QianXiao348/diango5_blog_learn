@@ -1,6 +1,6 @@
 from typing import Tuple
 
-def moderate_comment_content(text: str) -> Tuple[bool, str]:
+def moderate_content(text: str) -> Tuple[bool, str]:
     """
     模拟本地模型对评论内容进行规范判断。
     返回 (is_safe, message)。

@@ -13,7 +13,7 @@ import datetime
 
 from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
 
-from .moderation import moderate_comment_content
+from .moderation import moderate_content
 # （首页）博客的分页
 def index(request):
     blog_list = Blog.objects.all().order_by('-pub_time')
@@ -104,11 +104,23 @@ def pub_blog(request):
     else: # POST 请求
         form = PubBlogForm(request.POST)
         if form.is_valid():
+            title = form.cleaned_data.get('title')
+            content= form.cleaned_data.get('content')
+            
+            # ai审核
+            is_title_safe, title_moderation_msg = moderate_content(title)
+            is_content_safe, content_moderation_msg = moderate_content(content)
+            
+            if not is_title_safe:
+                return JsonResponse({'code': 400, 'msg': f'标题审核失败：{title_moderation_msg}'})
+            if not is_content_safe:
+                return JsonResponse({'code': 400, 'msg': f'内容审核失败：{content_moderation_msg}'})
+            
             # 使用 form.save(commit=False) 获取模型实例，但不立即保存到数据库
             blog = form.save(commit=False)
             blog.author = request.user # 设置作者为当前登录用户
 
-            blog.save() # 现在，将完整的博客实例保存到数据库
+            blog.save() # 将完整的博客实例保存到数据库
             
             return JsonResponse({'code': 200, 'msg': '发布成功！', 'data': {'blog_id': blog.id}})
         else:
@@ -126,7 +138,8 @@ def pub_comment(request, blog_id, parent_comment_id=None):
         return JsonResponse({'code': 400, 'msg': '评论内容无效', 'errors': form.errors})
 
     content = form.cleaned_data.get('content')
-    is_safe, moderation_msg = moderate_comment_content(content)
+    # ai审核
+    is_safe, moderation_msg = moderate_content(content)
     if not is_safe:
         return JsonResponse({'code': 400, 'msg': f'用语不规范：{moderation_msg}'})
 

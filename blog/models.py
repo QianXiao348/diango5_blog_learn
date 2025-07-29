@@ -25,7 +25,7 @@ class Blog(models.Model):
 
 # 评论
 class BlogComment(MPTTModel):
-    content = models.TextField(verbose_name='内容')
+    content = models.TextField(max_length=200,verbose_name='内容')
     pub_time = models.DateTimeField(auto_now_add=True, verbose_name='评论时间')
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='comments', verbose_name='所属博客')
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='评论的作者')
