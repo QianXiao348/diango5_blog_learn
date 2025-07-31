@@ -79,7 +79,7 @@
     <form id="comment-form" method="post" action="{% url 'blog:pub_comment' blog.id %}">
         {% csrf_token %}
         <div class="mb-3">
-            <label for="id_content" class="form-label">评论内容</label>
+            <!-- <label for="id_content" class="form-label">评论内容</label> -->
             {{ comment_form.content }} 
         </div>
         {# 隐藏的父评论和回复用户ID字段，用于二级回复 #}

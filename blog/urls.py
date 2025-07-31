@@ -23,4 +23,14 @@ urlpatterns = [
     path('blog/edit/<int:blog_id>', views.edit_blog, name='edit_blog'),
     # 搜索
     path('blog/search', views.search, name='search'),
+    # 通知列表
+    path('notifications/list', views.notifications_list, name='notifications_list'),
+    # 标记已读
+    path('notifications/mark_as_read/<int:notification_id>', views.mark_notification_as_read, name='mark_notification_as_read'),
+    # 批量标记已读
+    path('notifications/mark_all_as_read', views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
+    # 删除已读通知
+    path('notifications/delete/<int:notification_id>', views.delete_notification, name='delete_notification'),
+    # 删除所有已读通知
+    path('notifications/delete_all', views.delete_all_notifications, name='delete_all_notifications'),
 ]

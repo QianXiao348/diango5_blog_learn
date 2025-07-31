@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -8,6 +9,8 @@
     <script src="{% static 'bootstrap5/popper.min.js' %}"></script>
     <script src="{% static 'bootstrap5/bootstrap.min.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {# 引入 Font Awesome 图标库，用于显示铃铛图标 #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     {% block head %}{% endblock %}
 </head>
 
@@ -27,17 +30,34 @@
                 <li><a href="{% url 'blog:pub_blog' %}" class="nav-link px-2 text-white">发布博客</a></li>
             </ul>
 
-            <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-lg-3" role="search" action="{% url 'blog:search' %}"><input
-                    type="search"
-                    name="q" class="form-control form-control-dark text-bg-white"
-                    placeholder="搜索 ..."
-                    aria-label="Search">
+            {# 搜索框 - 增加 me-3 (margin-right: 1rem) 将它向左推一点 #}
+            <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-3" role="search" action="{% url 'blog:search' %}">
+                <input type="search" name="q" class="form-control form-control-dark text-bg-white" placeholder="搜索 ..." aria-label="Search">
             </form>
+            
+            {# 通知铃铛 - 只在用户登录时显示 #}
             {% if user.is_authenticated %}
-                <div class="dropdown text-end"><a href="#"
-                                                  class="d-block link-body-emphasis text-decoration-none dropdown-toggle show"
-                                                  data-bs-toggle="dropdown" aria-expanded="true"> <img
-                        src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle"> </a>
+                <div class="notifications-bell me-3"> {# 添加一些右边距，与右侧的用户头像或按钮隔开 #}
+                    <a href="{% url 'blog:notifications_list' %}" class="btn btn-link text-white p-0 position-relative">
+                        <i class="fas fa-bell fa-lg"></i> {# 铃铛图标，fa-lg 增大图标 #}
+                        {# 使用视图或上下文处理器传递过来的 unread_notifications_count 变量 #}
+                        {% if unread_notifications_count %} {# 如果有未读通知数量 #}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_notifications_count }}
+                                <span class="visually-hidden">未读通知</span>
+                            </span>
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+
+            {# 用户头像下拉菜单 / 登录注册按钮 #}
+            {# 这里不再包含通知选项，因为它已经作为独立的铃铛图标显示在外面了 #}
+            {% if user.is_authenticated %}
+                <div class="dropdown text-end">
+                    <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true"> 
+                        <img src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle"> 
+                    </a>
                     <ul class="dropdown-menu text-small show"
                         style="position: absolute; inset: auto auto 0px 0px; margin: 0px; transform: translate3d(0px, -34px, 0px);"
                         data-popper-placement="top-start">
