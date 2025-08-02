@@ -1,6 +1,37 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}博客首页{% endblock %}
+
+{% block head %}
+{# 确保 Font Awesome 已经通过 base.html 引入。如果没引入，可以在这里再引入一次 #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0MDxM+h/f/b/Kx0zBf9Q2+Xv8Xl5P9+7s+228/w/p+XyR/k6+D/S7x8w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+    /* 为统计信息添加一些样式，使其在同一行 */
+    .blog-stats-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* 统计项之间的间距 */
+    }
+    .blog-stats-footer .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 4px; /* 图标和文字间距 */
+        font-size: 0.85rem; /* 稍微小一点，适合卡片底部 */
+        color: #6c757d; /* 灰色，与 text-body-secondary 保持一致 */
+    }
+    .blog-stats-footer .fas,
+    .blog-stats-footer .far { /* 同时应用于实心和空心图标 */
+        color: inherit; /* 继承父元素的颜色，即 #6c757d 灰色 */
+    }
+    /* 确保作者信息和时间也能在同一行显示，并与统计信息良好对齐 */
+    .card-footer > div:first-child { /* 作者头像和用户名 */
+        flex-shrink: 0; /* 防止收缩 */
+        margin-right: auto; /* 将它推到最左边 */
+    }
+</style>
+{% endblock %}
+
 
 {% block main %}
     <h1>博客列表</h1>
@@ -15,10 +46,25 @@
                         <p class="card-text">{{ blog.content|striptags|truncatechars:100 }}</p>
                     </div>
                     <div class="card-footer text-body-secondary d-flex justify-content-between align-items-center"> {# 添加 align-items-center 垂直居中 #}
+                        {# 作者头像和用户名 #}
                         <div>
                             <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle me-2" width="30" height="30" alt="作者头像">{{ blog.author.username }}
                         </div>
-                        <div class="text-end"> {# 添加 text-end 让时间靠右 #}
+
+                        {# =============================================== #}
+                        {# 新增：浏览量和点赞量 #}
+                        {# =============================================== #}
+                        <div class="blog-stats-footer ms-auto me-3"> {# ms-auto 推到右边，me-3 给时间留出空间 #}
+                            <span class="stat-item">
+                                <i class="fas fa-eye"></i> {{ blog.view_count }}
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-thumbs-up"></i> {{ blog.like_count }}
+                            </span>
+                        </div>
+                        {# =============================================== #}
+
+                        <div class="text-end"> {# 发布时间 #}
                             发布时间：{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}
                         </div>
                     </div>

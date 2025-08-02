@@ -1,49 +1,93 @@
 {# article/blog_detail.html #}
 {% extends 'base.html' %}
+{% load static %} {# 确保加载 static 标签 #}
+
 {% block title %}博客详情页{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{% static 'highlight/styles/default.min.css' %}">
 <script src="{% static 'highlight/highlight.min.js' %}"></script>
+{# 确保 Font Awesome 已经通过 base.html 引入。如果没引入，可以在这里再引入一次 #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0MDxM+h/f/b/Kx0zBf9Q2+Xv8Xl5P9+7s+228/w/p+XyR/k6+D/S7x8w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
 <style>
-    /* 评论项的基础样式 */
+    /* 评论项的基础样式 - 保持不变 */
     .comment-item {
         border: 1px solid #eee;
         padding: 10px;
         margin-bottom: 10px;
-        /* 请确保这里没有使用 mul 过滤器，通过 _comment.html 中的 class 来控制缩进 */
-        /* margin-left: var(--comment-indent, 0px);  */
-        /* border-left: var(--comment-border, none); */
-        /* padding-left: var(--comment-padding-left, 0px); */
-        background-color: #f9f9f9; /* 建议添加，让层级更清晰 */
-        border-radius: 5px; /* 建议添加 */
+        background-color: #f9f9f9;
+        border-radius: 5px;
     }
-    /* 评论缩进 (在 base.css 或这里定义) */
+    /* 评论缩进 (在 base.css 或这里定义) - 保持不变 */
     .comment-level-0 { margin-left: 0px; border-left: 3px solid #007bff; padding-left: 17px; }
     .comment-level-1 { margin-left: 20px; border-left: 3px solid #28a745; padding-left: 17px; }
     .comment-level-2 { margin-left: 40px; border-left: 3px solid #ffc107; padding-left: 17px; }
     .comment-level-3 { margin-left: 60px; border-left: 3px solid #dc3545; padding-left: 17px; }
-    /* 回复表单的默认隐藏 */
+    /* 回复表单的默认隐藏 - 保持不变 */
     .reply-form {
         margin-top: 5px;
         margin-bottom: 10px;
-        display: none; /* 关键：默认隐藏 */
+        display: none;
     }
-    /* 头像样式 */
+    /* 头像样式 - 保持不变 */
     .user-avatar {
         width: 40px;
         height: 40px;
         object-fit: cover;
         border-radius: 50%;
     }
-    /* 博客内容中的图片样式 (如果未在 base.css 全局控制，这里可以加上) */
+    /* 博客内容中的图片样式 (如果未在 base.css 全局控制，这里可以加上) - 保持不变 */
     .blog-content img,
-    .w-e-text-container img { /* wangEditor 插入的图片 */
+    .w-e-text-container img {
         max-width: 100%;
         height: auto;
         display: block;
         margin: 0 auto;
     }
+    /* 为统计信息添加一些样式，使其在同一行 */
+    .blog-stats {
+        display: flex;
+        align-items: center;
+        gap: 15px; /* 各个统计项之间的间距 */
+        margin-top: 10px; /* 与上方博客元信息隔开 */
+        margin-bottom: 20px; /* 与下方内容和评论区隔开 */
+        flex-wrap: wrap; /* 小屏幕下允许换行 */
+        padding: 10px 0; /* 内部留白 */
+        border-top: 1px solid #eee; /* 添加上边框 */
+        border-bottom: 1px solid #eee; /* 添加下边框 */
+        background-color: #f8f9fa; /* 轻微背景色 */
+        border-radius: 5px; /* 圆角 */
+    }
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.95rem;
+        color: #555;
+    }
+    .stat-item .fas, .stat-item .far {
+        font-size: 1.1em;
+        color: #007bff; /* 图标颜色 */
+    }
+    .like-button-group {
+        display: flex;
+        align-items: center;
+        gap: 8px; /* 按钮与数量之间的间距 */
+        margin-left: auto; /* 将点赞组推到右边 */
+    }
+    /* 调整点赞图标颜色 */
+    .btn-outline-primary .far.fa-heart,
+    .btn-outline-primary .fas.fa-heart {
+        color: #007bff; /* 默认未点赞的爱心颜色 */
+    }
+    .btn-primary .fas.fa-heart {
+        color: white; /* 已点赞的爱心颜色 */
+    }
+    .btn-outline-primary:hover .far.fa-heart {
+        color: white; /* 悬停时爱心变为白色 */
+    }
+
 </style>
 {% endblock %}
 
@@ -64,6 +108,37 @@
 </div>
 <hr>
 
+{# =============================================== #}
+{# 移动到这里：浏览量、点赞量和点赞按钮 #}
+{# =============================================== #}
+<div class="blog-stats">
+    <span class="stat-item">
+        <i class="fas fa-eye"></i> 浏览: <span id="view-count-display">{{ blog.view_count }}</span>
+    </span>
+    <div class="like-button-group">
+        <span class="stat-item">
+            <i class="fas fa-thumbs-up"></i> 点赞: <span id="like-count-display">{{ blog.like_count }}</span>
+        </span>
+        {% if request.user.is_authenticated %}
+            <button id="toggle-like-btn" data-blog-id="{{ blog.id }}"
+                    class="btn btn-sm {% if is_liked %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                {# 根据 is_liked 变量显示不同的图标和文本 #}
+                {% if is_liked %}
+                    <i class="fas fa-heart"></i> 已点赞
+                {% else %}
+                    <i class="far fa-heart"></i> 点赞
+                {% endif %}
+            </button>
+        {% else %}
+            {# 未登录用户点击跳转到登录页，并带上 next 参数，登录后可返回当前页面 #}
+            <a href="{% url 'qxauth:login' %}?next={{ request.path }}" class="btn btn-sm btn-outline-primary">
+                <i class="far fa-heart"></i> 登录点赞
+            </a>
+        {% endif %}
+    </div>
+</div>
+{# =============================================== #}
+
 {% if request.user.is_authenticated %}
     {% if request.user == blog.author or request.user.is_superuser %}
         <div class="mt-2">
@@ -79,7 +154,6 @@
     <form id="comment-form" method="post" action="{% url 'blog:pub_comment' blog.id %}">
         {% csrf_token %}
         <div class="mb-3">
-            <!-- <label for="id_content" class="form-label">评论内容</label> -->
             {{ comment_form.content }} 
         </div>
         {# 隐藏的父评论和回复用户ID字段，用于二级回复 #}
@@ -114,6 +188,69 @@
         const parentCommentIdInput = $("#parent-comment-id");
         const replyToUserIdInput = $("#reply-to-user-id");
         const commentErrorMessage = $("#comment-error-message"); 
+
+        // ===============================================
+        // 新增/修改：点赞功能相关的JS
+        // ===============================================
+        const toggleLikeBtn = $('#toggle-like-btn');
+        const likeCountDisplay = $('#like-count-display');
+
+        // CSRF Token 获取函数 (确保其在全局或可访问范围内)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        if (toggleLikeBtn.length) { // 确保点赞按钮存在（用户已登录）
+            toggleLikeBtn.on('click', function() {
+                $.ajax({
+                    url: `{% url 'blog:toggle_like' blog_id=blog.id %}`,
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    success: function(response) {
+                        if (response.code === 200) {
+                            // 更新点赞按钮样式和文本
+                            if (response.is_liked) { // is_liked 字段由后端返回
+                                toggleLikeBtn.removeClass('btn-outline-primary').addClass('btn-primary');
+                                toggleLikeBtn.html('<i class="fas fa-heart"></i> 已点赞');
+                            } else {
+                                toggleLikeBtn.removeClass('btn-primary').addClass('btn-outline-primary');
+                                toggleLikeBtn.html('<i class="far fa-heart"></i> 点赞');
+                            }
+                            // 更新点赞数量显示
+                            likeCountDisplay.text(response.like_count);
+                        } else {
+                            alert(response.msg); // 显示错误信息
+                            console.error("点赞操作失败:", response.msg);
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        let errorMsg = "网络或服务器错误，点赞失败。";
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
+                            errorMsg = jqXHR.responseJSON.msg;
+                        } else if (jqXHR.responseText) {
+                            errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "...";
+                        }
+                        alert(errorMsg);
+                        console.error("点赞 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                    }
+                });
+            });
+        }
+        // ===============================================
+
 
         // 处理二级回复按钮点击事件 (使用事件委托，确保对动态添加的评论也有效)
         $(document).on('click', '.reply-button', function() {

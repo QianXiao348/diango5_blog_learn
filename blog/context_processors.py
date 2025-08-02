@@ -1,5 +1,6 @@
 from .models import Notification
 
+
 def notifications_context(request):
     """
     获取未读通知数量
