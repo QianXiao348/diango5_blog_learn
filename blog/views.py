@@ -260,18 +260,25 @@ def delete_comment(request, comment_id):
     comment_author = comment.author
     comment_blog = comment.blog
     deleter = request.user
+    notification_obj = None
 
     try:
         comment.delete()
         # 如果不是评论作者自己删除，则通知评论作者
         if comment_author != deleter:
-            Notification.objects.create(
+            notification_obj = Notification.objects.create(
                 recipient=comment_author,
                 actor=deleter,
                 verb='删除了你的评论',
                 description=f'您在文章 "{comment_blog.title}" 的评论已被 {deleter.username} 删除。',
                 target_url=reverse('blog:blog_detail', args=[comment.blog.id])
             )
+
+        if notification_obj:
+            notification_obj.target_url = reverse('blog:blog_detail', args=[comment.blog.id]) \
+                                          + f'?notification_id={notification_obj.id}'
+            notification_obj.save()
+
         return JsonResponse({'code': 200, 'msg': '评论删除成功！'})
     except Exception as e:
         return JsonResponse({'code': 500, 'msg': f'删除评论失败：{e}'})
@@ -295,8 +302,23 @@ def delete_blog(request, blog_id):
     blog = get_object_or_404(Blog, id=blog_id)
     if not request.user.is_superuser and blog.author != request.user:
         return HttpResponseForbidden('你不是管理员或博主！没有权限删除博客！')
+
+    blog_author = blog.author
+    blog_title = blog.title
+    deleter = request.user
+
     if request.method == 'POST':
         blog.delete()
+
+        if blog_author != deleter:
+            Notification.objects.create(
+                recipient=blog_author,
+                actor=deleter,
+                verb='删除了你的博客',
+                description=f'{deleter} 删除了你的博客 "{blog_title}"。',
+                target_url=reverse('blog:index')
+            )
+
         return redirect(reverse('blog:index'))
     return render(request, 'article/delete_confirm.html', context={'blog': blog})
 
