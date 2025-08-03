@@ -14,6 +14,7 @@ class BlogCategory(models.Model):
     class Meta:
         verbose_name = '博客分类'
         verbose_name_plural = verbose_name
+        ordering = ['name']
 
 
 class Blog(models.Model):

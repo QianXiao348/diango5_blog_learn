@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike
 from .forms import PubBlogForm, PubCommentForm
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.core.files.storage import default_storage
@@ -21,20 +21,39 @@ def index(request):
     """
     首页
     """
-    blog_list = Blog.objects.all().order_by('-pub_time')
+    # 使用 annotate() 和 Count() 来一次性计算每篇博客的评论数
+    blog_list = Blog.objects.annotate(comment_count=Count('comments')).order_by('-pub_time')
 
     # 实例化 Paginator，每页显示 6 篇文章
     paginator = Paginator(blog_list, 6)
-
     # 获取当前的页码
     page = request.GET.get('page')
-    blogs = paginator.get_page(page)
+    blogs = paginator.get_page(page)  # 获取指定页面的数据
 
     return render(request, 'registration/index.html', context={'blogs': blogs})
 
 
+@require_GET
+def category_blogs(request, category_id):
+    """
+    显示某个分类下的所有博客文章
+    """
+    category = get_object_or_404(BlogCategory, id=category_id)
+    # 获取分类下的博客
+    blog_list = Blog.objects.filter(category=category).order_by('-like_count')
+
+    paginator = Paginator(blog_list, 6)
+    page = request.GET.get('page')
+    blogs = paginator.get_page(page)
+
+    return render(request, 'article/category_blogs.html', context={'blogs': blogs, 'category': category})
+
+
 def blog_detail(request, blog_id):
-    blog = get_object_or_404(Blog, id=blog_id)
+    """
+    博客详情
+    """
+    blog = get_object_or_404(Blog.objects.annotate(comment_count=Count('comments')), id=blog_id)
 
     # 获取浏览量
     session_key = f'viewed_blog_{blog_id}'
@@ -46,13 +65,15 @@ def blog_detail(request, blog_id):
         request.session.set_expiry(datetime.timedelta(days=1).total_seconds())
         blog.refresh_from_db()
 
+    # 判断当前用户是否已点赞
     is_liked = False
     if request.user.is_authenticated:
         is_liked = BlogLike.objects.filter(blog=blog, user=request.user).exists()
 
     # 获取顶级评论
-    comments = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author', 'reply_to').order_by('tree_id', 'lft')
-    comment_form = PubCommentForm()
+    comments = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author', 'reply_to').order_by(
+        'tree_id', 'lft')
+    comment_form = PubCommentForm()  # 创建一个空的表单 用来渲染
 
     # 处理通知标记已读
     notification_id_from_url = request.GET.get('notification_id')
@@ -66,9 +87,6 @@ def blog_detail(request, blog_id):
             )
             notification.is_read = True
             notification.save()
-            # 可以在这里添加一个消息，提示用户通知已读
-            # from django.contrib import messages
-            # messages.success(request, '通知已标记为已读！')
         except Notification.DoesNotExist:
             # 如果通知不存在、不属于当前用户或已读，则忽略
             pass

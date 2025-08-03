@@ -35,4 +35,6 @@ urlpatterns = [
     path('notifications/delete_all', views.delete_all_notifications, name='delete_all_notifications'),
     # 点赞
     path('blog/like/<int:blog_id>', views.toggle_like, name='toggle_like'),
+    # 分类展示 URL
+    path('blog/category/<int:category_id>', views.category_blogs, name='category_blogs'),
 ]

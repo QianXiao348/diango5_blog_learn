@@ -20,15 +20,16 @@
         border-radius: 5px;
     }
     /* 评论缩进 (在 base.css 或这里定义) - 保持不变 */
+    /* 注意：如果你使用 MPTT 并希望缩进，这些样式需要在 _comment.html 中通过 comment.level 应用 */
     .comment-level-0 { margin-left: 0px; border-left: 3px solid #007bff; padding-left: 17px; }
     .comment-level-1 { margin-left: 20px; border-left: 3px solid #28a745; padding-left: 17px; }
     .comment-level-2 { margin-left: 40px; border-left: 3px solid #ffc107; padding-left: 17px; }
     .comment-level-3 { margin-left: 60px; border-left: 3px solid #dc3545; padding-left: 17px; }
-    /* 回复表单的默认隐藏 - 保持不变 */
+    /* 回复表单的默认隐藏 - 这条可以保留，因为它可能在 _comment.html 中定义 */
     .reply-form {
         margin-top: 5px;
         margin-bottom: 10px;
-        display: none;
+        display: none; /* 关键：默认隐藏 */
     }
     /* 头像样式 - 保持不变 */
     .user-avatar {
@@ -36,6 +37,15 @@
         height: 40px;
         object-fit: cover;
         border-radius: 50%;
+    }
+    /* 作者的样式 - 保持不变 */
+    .author-name {
+        font-weight: 600;
+        color: rgba(255, 174, 0, 0.98);
+        font-size: 1.1em;
+        border-bottom: 1px dotted #ffffff;
+        padding: 2px 4px;
+        border-radius: 3px;
     }
     /* 博客内容中的图片样式 (如果未在 base.css 全局控制，这里可以加上) - 保持不变 */
     .blog-content img,
@@ -87,19 +97,18 @@
     .btn-outline-primary:hover .far.fa-heart {
         color: white; /* 悬停时爱心变为白色 */
     }
-
 </style>
 {% endblock %}
 
 {% block main %}
-<h1>{{ blog.title }}</h1>
+<h2>{{ blog.title }}</h2>
 <hr>
 <div class="mt-2">
     <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
         class="rounded-circle" width="30" alt="">
-    <span class="ms-2">{{ blog.author.username }}</span>
+    <span class="ms-2 author-name">{{ blog.author.username }}</span>
     <span class="ms-2">发布时间：</span>
-    <span class="ms-2 font-monospace">{{ blog.pub_time|date:'Y年m月d日 H时i分s秒' }}</span>
+    <span class="font-monospace">{{ blog.pub_time|date:'Y-m-d H:i' }}</span>
     <span class="ms-2">所属标签：{{ blog.category.name }}</span>
 </div>
 <hr>
@@ -108,17 +117,19 @@
 </div>
 <hr>
 
-{# =============================================== #}
-{# 移动到这里：浏览量、点赞量和点赞按钮 #}
-{# =============================================== #}
+{# 浏览量、点赞量和点赞按钮 #}
 <div class="blog-stats">
     <span class="stat-item">
-        <i class="fas fa-eye"></i> 浏览: <span id="view-count-display">{{ blog.view_count }}</span>
+        <i class="fas fa-eye"></i> 浏览量: <span id="view-count-display">{{ blog.view_count }}</span>
     </span>
+<span class="stat-item">
+    <i class="fas fa-comment-dots"></i> 评论数: {{ blog.comment_count | default:0 }}
+</span>
     <div class="like-button-group">
         <span class="stat-item">
             <i class="fas fa-thumbs-up"></i> 点赞: <span id="like-count-display">{{ blog.like_count }}</span>
         </span>
+
         {% if request.user.is_authenticated %}
             <button id="toggle-like-btn" data-blog-id="{{ blog.id }}"
                     class="btn btn-sm {% if is_liked %}btn-primary{% else %}btn-outline-primary{% endif %}">
@@ -137,7 +148,6 @@
         {% endif %}
     </div>
 </div>
-{# =============================================== #}
 
 {% if request.user.is_authenticated %}
     {% if request.user == blog.author or request.user.is_superuser %}
@@ -149,7 +159,7 @@
 {% endif %}
 
 <div class="mt-4">
-    <h3>评论（{{ blog.comments.all|length }}）：</h3>
+    <h3>评论：</h3>
     <div id="comment-error-message" class="alert alert-danger" style="display:none;"></div> {# 错误提示区域 #}
     <form id="comment-form" method="post" action="{% url 'blog:pub_comment' blog.id %}">
         {% csrf_token %}
@@ -190,7 +200,7 @@
         const commentErrorMessage = $("#comment-error-message"); 
 
         // ===============================================
-        // 新增/修改：点赞功能相关的JS
+        // 点赞功能相关的JS
         // ===============================================
         const toggleLikeBtn = $('#toggle-like-btn');
         const likeCountDisplay = $('#like-count-display');
@@ -252,22 +262,59 @@
         // ===============================================
 
 
-        // 处理二级回复按钮点击事件 (使用事件委托，确保对动态添加的评论也有效)
+        // ===============================================
+        // 处理回复按钮点击事件，滚动到主评论表单
+        // ===============================================
         $(document).on('click', '.reply-button', function() {
             const parentId = $(this).data('comment-id');
             const authorName = $(this).data('author-name');
             const authorId = $(this).data('author-id'); 
 
+            // 设置主评论表单的隐藏字段
             parentCommentIdInput.val(parentId);
             replyToUserIdInput.val(authorId); 
             
-            // 隐藏所有其他回复表单，避免多个表单同时显示
-            $('.reply-form').hide(); 
-            // 显示当前点击的评论下方的回复表单 (假设它在 _comment.html 中)
-            $('#reply-form-' + parentId).toggle();
+            // 清空评论输入框（如果需要），然后填充回复文本
+            commentContentInput.val(''); // 确保清空旧内容
+            commentContentInput.val(`回复 @${authorName} : `).focus(); // 填充并聚焦
 
-            commentContentInput.val(`回复 @${authorName} : `).focus();
+            // 滚动到主评论表单
+            // 瞬间滚动
+            $('html, body').scrollTop(commentForm.offset().top - 80);
+
+            // 确保隐藏所有其他回复表单（如果它们是通过 _comment.html 渲染出来的）
+            // 如果你已经从 _comment.html 中移除了这些内联表单，这一行可以移除
+            $('.reply-form').hide(); 
         });
+
+        // ===============================================
+        // 清除回复状态的逻辑
+        // ===============================================
+        commentContentInput.on('input', function() {
+            // 如果用户删除了回复前缀，就清除父评论和回复用户ID
+            // 判断是否以 "回复 @" 开头，并且后面没有其他内容了（即用户删除了部分回复文本）
+            if ($(this).val().length < (`回复 @${replyToUserIdInput.data('author-name')} : `).length && $(this).val().startsWith('回复 @')) {
+                parentCommentIdInput.val('');
+                replyToUserIdInput.val('');
+                // 可以移除 @回复 的文本，或者让用户自己决定
+                // $(this).val('');
+            }
+        });
+
+        // 当用户点击评论框以外的地方时，清除回复状态
+        $(document).on('click', function(e) {
+            // 检查点击的不是评论表单内部，也不是回复按钮本身
+            if (!$(e.target).closest('#comment-form').length && !$(e.target).closest('.reply-button').length) {
+                // 如果当前评论框内容是回复形式，且用户点击了外部，清空回复状态
+                if (commentContentInput.val().startsWith('回复 @')) {
+                    commentContentInput.val(''); // 清空回复内容
+                }
+                parentCommentIdInput.val('');
+                replyToUserIdInput.val('');
+            }
+        });
+        // ===============================================
+
 
         // 提交评论按钮点击事件
         submitCommentBtn.on('click', function(event) {
@@ -287,15 +334,10 @@
             const csrfToken = $("input[name='csrfmiddlewaretoken']").val();
             const postData = { 
                 content: content,
-                blog_id: blogId 
+                blog_id: blogId,
+                parent_comment_id: parent_comment_id, // 确保提交 parent_comment_id
+                reply_to_user_id: reply_to_user_id // 确保提交 reply_to_user_id
             };
-            
-            if (parent_comment_id) {
-                postData.parent_comment_id = parent_comment_id;
-                if (reply_to_user_id) { 
-                    postData.reply_to_user_id = reply_to_user_id;
-                }
-            }
             
             $.ajax({
                 url: commentForm.attr('action'), 
