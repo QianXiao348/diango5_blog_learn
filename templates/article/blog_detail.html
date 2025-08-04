@@ -20,7 +20,7 @@
         border-radius: 5px;
     }
     /* 评论缩进 (在 base.css 或这里定义) - 保持不变 */
-    /* 注意：如果你使用 MPTT 并希望缩进，这些样式需要在 _comment.html 中通过 comment.level 应用 */
+    /* 注意：这里是硬编码了 level 样式，_comment.html 会使用 comment.display_level */
     .comment-level-0 { margin-left: 0px; border-left: 3px solid #007bff; padding-left: 17px; }
     .comment-level-1 { margin-left: 20px; border-left: 3px solid #28a745; padding-left: 17px; }
     .comment-level-2 { margin-left: 40px; border-left: 3px solid #ffc107; padding-left: 17px; }
@@ -123,7 +123,7 @@
         <i class="fas fa-eye"></i> 浏览量: <span id="view-count-display">{{ blog.view_count }}</span>
     </span>
 <span class="stat-item">
-    <i class="fas fa-comment-dots"></i> 评论数: {{ blog.comment_count | default:0 }}
+    <i class="fas fa-comment-dots"></i> 评论数: {{ blog.comment_count | default:0 }} {# 这里已经正确使用 blog.comment_count #}
 </span>
     <div class="like-button-group">
         <span class="stat-item">
@@ -159,26 +159,33 @@
 {% endif %}
 
 <div class="mt-4">
-    <h3>评论：</h3>
+    {# 核心修改：评论总数显示，使用 blog.comment_count #}
+    <h3>评论 ({{ blog.comment_count | default:0 }} )：</h3>
     <div id="comment-error-message" class="alert alert-danger" style="display:none;"></div> {# 错误提示区域 #}
     <form id="comment-form" method="post" action="{% url 'blog:pub_comment' blog.id %}">
         {% csrf_token %}
         <div class="mb-3">
-            {{ comment_form.content }} 
+            {{ comment_form.content }}
         </div>
         {# 隐藏的父评论和回复用户ID字段，用于二级回复 #}
         <input type="hidden" name="parent_comment_id" id="parent-comment-id" value="">
         <input type="hidden" name="reply_to_user_id" id="reply-to-user-id" value="">
-        
+
         <div class="text-end mt-2">
-            <button type="button" id="submit-comment-btn" class="btn btn-primary">发表评论</button>
+            {# 根据用户登录状态显示按钮 #}
+            {% if request.user.is_authenticated %}
+                <button type="button" id="submit-comment-btn" class="btn btn-primary">发表评论</button>
+            {% else %}
+                <button type="button" class="btn btn-primary" onclick="window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}'">登录后评论</button>
+            {% endif %}
         </div>
     </form>
 </div>
 
 <div class="mt-2">
     <ul class="list-group list-group-flush">
-        {% for comment in comments %} 
+        {% for comment in comments %}
+        {# 传递 comment.display_level 到 _comment.html #}
         {% include 'article/_comment.html' with comment=comment comment_form=comment_form %}
         {% empty %} {# 如果没有评论，显示此消息 #}
             <li class="list-group-item text-center text-muted">目前还没有评论。</li>
@@ -186,21 +193,62 @@
     </ul>
 </div>
 
+{# 评论分页导航 #}
+<nav aria-label="评论分页" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if comments.has_previous %}
+            <li class="page-item">
+                {# 确保分页链接保持现有的查询参数，包括 notification_id #}
+                <a class="page-link" href="?comment_page={{ comments.previous_page_number }}{% if request.GET.notification_id %}&notification_id={{ request.GET.notification_id }}{% endif %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+        {% endif %}
+
+        {% for page_num in comments.paginator.page_range %}
+            {% if comments.number == page_num %}
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ page_num }}</span></li>
+            {% else %}
+                {# 确保分页链接保持现有的查询参数，包括 notification_id #}
+                <li class="page-item"><a class="page-link" href="?comment_page={{ page_num }}{% if request.GET.notification_id %}&notification_id={{ request.GET.notification_id }}{% endif %}">{{ page_num }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if comments.has_next %}
+            <li class="page-item">
+                {# 确保分页链接保持现有的查询参数，包括 notification_id #}
+                <a class="page-link" href="?comment_page={{ comments.next_page_number }}{% if request.GET.notification_id %}&notification_id={{ request.GET.notification_id }}{% endif %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+
 <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
 <script>
     $(document).ready(function() {
         hljs.highlightAll(); // 代码高亮，确保在DOM加载完成后调用
 
-        const blogId = {{ blog.id }}; 
+        const blogId = {{ blog.id }};
         const commentForm = $("#comment-form");
-        const submitCommentBtn = $("#submit-comment-btn");
-        const commentContentInput = $("#id_content"); 
+        const submitCommentBtn = $("#submit-comment-btn"); // 获取提交评论按钮
+        const commentContentInput = $("#id_content");
         const parentCommentIdInput = $("#parent-comment-id");
         const replyToUserIdInput = $("#reply-to-user-id");
-        const commentErrorMessage = $("#comment-error-message"); 
+        const commentErrorMessage = $("#comment-error-message");
 
         // ===============================================
-        // 点赞功能相关的JS
+        // 点赞功能相关的JS (保持不变)
         // ===============================================
         const toggleLikeBtn = $('#toggle-like-btn');
         const likeCountDisplay = $('#like-count-display');
@@ -266,14 +314,23 @@
         // 处理回复按钮点击事件，滚动到主评论表单
         // ===============================================
         $(document).on('click', '.reply-button', function() {
+            // 首先判断用户是否已登录，未登录则提示并阻止后续操作
+            {% if not request.user.is_authenticated %}
+                alert('请先登录才能回复！');
+                window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
+                return; // 阻止后续JS执行
+            {% endif %}
+
             const parentId = $(this).data('comment-id');
             const authorName = $(this).data('author-name');
-            const authorId = $(this).data('author-id'); 
+            const authorId = $(this).data('author-id');
 
             // 设置主评论表单的隐藏字段
             parentCommentIdInput.val(parentId);
-            replyToUserIdInput.val(authorId); 
-            
+            replyToUserIdInput.val(authorId);
+            // 存储 authorName，用于后续清除状态的判断
+            replyToUserIdInput.data('author-name', authorName);
+
             // 清空评论输入框（如果需要），然后填充回复文本
             commentContentInput.val(''); // 确保清空旧内容
             commentContentInput.val(`回复 @${authorName} : `).focus(); // 填充并聚焦
@@ -284,24 +341,30 @@
 
             // 确保隐藏所有其他回复表单（如果它们是通过 _comment.html 渲染出来的）
             // 如果你已经从 _comment.html 中移除了这些内联表单，这一行可以移除
-            $('.reply-form').hide(); 
+            $('.reply-form').hide();
         });
 
         // ===============================================
         // 清除回复状态的逻辑
         // ===============================================
         commentContentInput.on('input', function() {
-            // 如果用户删除了回复前缀，就清除父评论和回复用户ID
-            // 判断是否以 "回复 @" 开头，并且后面没有其他内容了（即用户删除了部分回复文本）
-            if ($(this).val().length < (`回复 @${replyToUserIdInput.data('author-name')} : `).length && $(this).val().startsWith('回复 @')) {
+            const currentVal = $(this).val();
+            const prefixAuthorName = replyToUserIdInput.data('author-name');
+            const prefix = prefixAuthorName ? `回复 @${prefixAuthorName} : ` : '';
+
+            if (currentVal === '' || (prefix && !currentVal.startsWith(prefix))) {
+                 // 如果完全清空，或者不再是回复模式，则清除
                 parentCommentIdInput.val('');
                 replyToUserIdInput.val('');
-                // 可以移除 @回复 的文本，或者让用户自己决定
-                // $(this).val('');
+                replyToUserIdInput.removeData('author-name'); // 清除存储的作者名
+            } else if (parentCommentIdInput.val() && !currentVal.startsWith(prefix)) {
+                // 如果是回复状态，但文本内容不再以精确前缀开头（用户可能删改了）
+                parentCommentIdInput.val('');
+                replyToUserIdInput.val('');
+                replyToUserIdInput.removeData('author-name');
             }
         });
 
-        // 当用户点击评论框以外的地方时，清除回复状态
         $(document).on('click', function(e) {
             // 检查点击的不是评论表单内部，也不是回复按钮本身
             if (!$(e.target).closest('#comment-form').length && !$(e.target).closest('.reply-button').length) {
@@ -311,73 +374,96 @@
                 }
                 parentCommentIdInput.val('');
                 replyToUserIdInput.val('');
+                replyToUserIdInput.removeData('author-name');
             }
         });
         // ===============================================
 
 
+        // ===============================================
         // 提交评论按钮点击事件
-        submitCommentBtn.on('click', function(event) {
-            event.preventDefault(); // 阻止表单默认提交
+        // ===============================================
+        // 这里的 submitCommentBtn 只有在用户登录时才存在，无需额外的 if (submitCommentBtn.length) 判断
+        // 因为如果未登录，HTML 渲染的是另一个按钮。
+        // 但为了代码健壮性，我们可以保留它，或者让 JavaScript 更简单。
+        if ($("#submit-comment-btn").length) { // 检查按钮是否存在
+            $("#submit-comment-btn").on('click', function(event) {
+                event.preventDefault();
 
-            const content = commentContentInput.val();
-            const parent_comment_id = parentCommentIdInput.val();
-            const reply_to_user_id = replyToUserIdInput.val();
+                // 在这里再次检查用户登录状态，以防万一
+                {% if not request.user.is_authenticated %}
+                    alert('请先登录才能发表评论！');
+                    window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
+                    return; // 阻止后续 AJAX 提交
+                {% endif %}
 
-            if (!content.trim()) {
-                commentErrorMessage.text("评论内容不能为空！").show();
-                return;
-            } else {
-                commentErrorMessage.hide(); 
-            }
+                const content = commentContentInput.val();
+                const parent_comment_id = parentCommentIdInput.val();
+                const reply_to_user_id = replyToUserIdInput.val();
 
-            const csrfToken = $("input[name='csrfmiddlewaretoken']").val();
-            const postData = { 
-                content: content,
-                blog_id: blogId,
-                parent_comment_id: parent_comment_id, // 确保提交 parent_comment_id
-                reply_to_user_id: reply_to_user_id // 确保提交 reply_to_user_id
-            };
-            
-            $.ajax({
-                url: commentForm.attr('action'), 
-                method: 'POST',
-                data: postData, 
-                headers: {
-                    'X-CSRFToken': csrfToken
-                },
-                success: function(response) {
-                    if (response.code === 200) {
-                        commentContentInput.val(''); 
-                        parentCommentIdInput.val(''); 
-                        replyToUserIdInput.val(''); 
-                        commentErrorMessage.hide(); 
-                        window.location.reload(); 
-                    } else {
-                        commentErrorMessage.text(response.msg).show(); 
-                        console.error("评论失败:", response.msg); 
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    let errorMsg = "网络或服务器错误，请重试。";
-                    if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
-                        errorMsg = jqXHR.responseJSON.msg; 
-                    } else if (jqXHR.responseText) {
-                        errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "..."; 
-                    }
-                    commentErrorMessage.text(errorMsg).show();
-                    console.error("评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                if (!content.trim()) {
+                    commentErrorMessage.text("评论内容不能为空！").show();
+                    return;
+                } else {
+                    commentErrorMessage.hide();
                 }
+
+                const csrfToken = getCookie('csrftoken'); // 使用 getCookie 获取 CSRF token
+                const postData = {
+                    content: content,
+                    blog_id: blogId,
+                    parent_comment_id: parent_comment_id,
+                    reply_to_user_id: reply_to_user_id
+                };
+
+                $.ajax({
+                    url: commentForm.attr('action'),
+                    method: 'POST',
+                    data: postData,
+                    headers: { 'X-CSRFToken': csrfToken },
+                    success: function(response) {
+                        if (response.code === 200) {
+                            commentContentInput.val('');
+                            parentCommentIdInput.val('');
+                            replyToUserIdInput.val('');
+                            replyToUserIdInput.removeData('author-name'); // 提交成功后清除
+                            commentErrorMessage.hide();
+                            window.location.reload();
+                        } else {
+                            commentErrorMessage.text(response.msg).show();
+                            console.error("评论失败:", response.msg);
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        let errorMsg = "网络或服务器错误，请重试。";
+                        // 403 Forbidden 或其他认证失败
+                        if (jqXHR.status === 403 || jqXHR.status === 401) {
+                            alert('会话已过期或未登录，请重新登录！');
+                            window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
+                            return;
+                        }
+
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
+                            errorMsg = jqXHR.responseJSON.msg;
+                        } else if (jqXHR.responseText) {
+                            errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "...";
+                        }
+                        commentErrorMessage.text(errorMsg).show();
+                        console.error("评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                    }
+                });
             });
-        });
-        
-        // 删除评论按钮
+        }
+
+        // ===============================================
+        // 删除评论按钮 (保持不变)
+        // ===============================================
         $(document).on('click', '.delete-comment-btn', function() {
             if (!confirm("确定要删除这条评论吗？")) {
                 return;
             }
             const commentId = $(this).data('comment-id');
-            const csrfToken = $("input[name='csrfmiddlewaretoken']").val();
+            const csrfToken = getCookie('csrftoken');
 
             $.ajax({
                 url: `/blog/comment/delete/${commentId}/`,
@@ -385,15 +471,20 @@
                 headers: { 'X-CSRFToken': csrfToken },
                 success: function(response) {
                     if (response.code === 200) {
-                        window.location.reload(); 
+                        window.location.reload();
                     } else {
-                        // 统一错误提示方式，显示在页面内，不再弹 alert
-                        commentErrorMessage.text(response.msg).show(); 
+                        commentErrorMessage.text(response.msg).show();
                         console.error("删除失败:", response.msg);
                     }
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
-                    // 统一错误提示方式，显示在页面内，不再弹 alert
+                    // 403 Forbidden 或其他认证失败
+                    if (jqXHR.status === 403 || jqXHR.status === 401) {
+                        alert('会话已过期或未登录，请重新登录！');
+                        window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
+                        return;
+                    }
+
                     let errorMsg = "网络或服务器错误，请重试。";
                     if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
                         errorMsg = jqXHR.responseJSON.msg; 

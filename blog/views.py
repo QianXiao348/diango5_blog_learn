@@ -71,8 +71,18 @@ def blog_detail(request, blog_id):
         is_liked = BlogLike.objects.filter(blog=blog, user=request.user).exists()
 
     # 获取顶级评论
-    comments = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author', 'reply_to').order_by(
+    comment_list = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author', 'reply_to').order_by(
         'tree_id', 'lft')
+    processed_comments = []
+    for comment in comment_list:
+        comment.display_level = min(comment.level, 1)
+        processed_comments.append(comment)
+
+    # 分页
+    paginator = Paginator(processed_comments, 10)
+    page = request.GET.get('comment_page')
+    comments = paginator.get_page(page)
+
     comment_form = PubCommentForm()  # 创建一个空的表单 用来渲染
 
     # 处理通知标记已读
@@ -204,17 +214,29 @@ def pub_comment(request, blog_id, parent_comment_id=None):
         return JsonResponse({'code': 400, 'msg': '评论内容无效', 'errors': form.errors})
 
     content = form.cleaned_data.get('content')
+    parent_comment_id = request.POST.get('parent_comment_id')
+    reply_to_user_id = request.POST.get('reply_to_user_id')  # 获取被回复者ID
+
+    if parent_comment_id and reply_to_user_id:
+        User = get_user_model()  # 确保导入 User
+        try:
+            replied_to_user = User.objects.get(id=reply_to_user_id)
+            # 构建前端可能添加的前缀，然后从内容中移除它
+            prefix_to_remove = f'回复 @{replied_to_user.username} : '
+            if content.startswith(prefix_to_remove):
+                content = content[len(prefix_to_remove):].strip()  # 移除前缀并去除首尾空格
+        except User.DoesNotExist:
+            pass  # 如果用户不存在，则不移除前缀
+
     # ai审核
     is_safe, moderation_msg = moderate_content(content)
     if not is_safe:
         return JsonResponse({'code': 400, 'msg': f'用语不规范：{moderation_msg}'})
 
-    parent_comment_id = request.POST.get('parent_comment_id')
-    reply_to_user_id = request.POST.get('reply_to_user_id')
-
     new_comment = form.save(commit=False)
     new_comment.blog = blog
     new_comment.author = request.user
+    new_comment.content = content
 
     # 默认通知作者
     target_user = blog.author

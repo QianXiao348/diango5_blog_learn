@@ -1,9 +1,10 @@
 {# article/_comment.html #}
 
-{% load static %} 
+{% load static %}
 
 <li class="list-group-item">
-    <div class="comment-item comment-level-{{ comment.level }}"> 
+    {# 核心修改：使用 comment.display_level 来控制缩进样式 #}
+    <div class="comment-item comment-level-{{ comment.display_level }}">
         <div class="d-flex justify-content-between text-body-secondary mb-2">
             <div class="user-info d-flex align-items-center">
                 <img src="{% if comment.author.profile.avatar %}{{ comment.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
@@ -19,23 +20,24 @@
                 {{ comment.pub_time|date:'Y-m-d H:i'}}
             </div>
         </div>
+
         <div class="comment-content mb-2">{{ comment.content|linebreaksbr }}</div>
 
         <div class="comment-actions">
             {% if request.user.is_authenticated %}
-            <button class="reply-button btn btn-sm btn-outline-info" 
+            {# 回复按钮：保持显示，允许回复任何层级的评论 #}
+            <button class="reply-button btn btn-sm btn-outline-info"
                     data-comment-id="{{ comment.id }}"
-                    data-author-name="{{ comment.author.username }}" {# 添加这个 data 属性 #}
-                    data-author-id="{{ comment.author.id }}">回复</button> {# 添加这个 data 属性 #}
+                    data-author-name="{{ comment.author.username }}"
+                    data-author-id="{{ comment.author.id }}">回复</button>
             {% endif %}
 
             {% if request.user == comment.author or request.user.is_superuser or request.user == comment.blog.author %}
-            {# 将删除按钮改为 AJAX 触发的 button，而不是 type="submit" 的 form #}
             <button class="delete-comment-btn btn btn-sm btn-outline-danger ms-2" data-comment-id="{{ comment.id }}">删除</button>
             {% endif %}
         </div>
 
-
+        {# 递归渲染子评论：保持显示，允许无限级递归 #}
         {% if comment.children.all %}
             <ul class="list-group list-group-flush mt-2">
                 {% for child_comment in comment.children.all %}
