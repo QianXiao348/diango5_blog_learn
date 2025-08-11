@@ -74,7 +74,8 @@
                         style="position: absolute; inset: auto auto 0px 0px; margin: 0px; transform: translate3d(0px, -34px, 0px);"
                         data-popper-placement="top-start">
                         <li><a class="dropdown-item" href="{% url 'qxauth:logout' %}">退出登录</a></li>
-                        <li><a class="dropdown-item" href="{% url 'qxauth:edit_profile' user_id=request.user.id %}">个人信息</a></li>
+                        <li><a class="dropdown-item" href="{% url 'qxauth:edit_profile' user_id=request.user.id %}">编辑信息</a></li>
+                        <li><a class="dropdown-item" href="{% url 'qxauth:user_profile' user_id=request.user.id %}">个人中心</a></li>
                     </ul>
                 </div>
             {% else %}

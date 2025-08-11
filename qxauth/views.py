@@ -1,18 +1,21 @@
-from django.shortcuts import render, redirect, reverse
-from django.http.response import JsonResponse
 import string
 import random
+
 from django.http import HttpResponse
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.views.decorators.http import require_http_methods
-from .forms import RegisterForm, LoginForm, ProfileForm
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.models import User
 from django.urls.base import reverse_lazy
 from django.contrib.auth.decorators import login_required
-from .models import Profile
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render, redirect, reverse
+from django.http.response import JsonResponse
 
+from .models import Profile
+from .forms import RegisterForm, LoginForm, ProfileForm
+from blog.models import Blog
 
 User = get_user_model()
 
@@ -137,3 +140,24 @@ def edit_profile(request, user_id):
             'user': user
         }
         return render(request, 'registration/edit.html',context=context)
+
+
+def user_frofile(request, user_id):
+    """
+    显示指定用户的个人主页 并展示其发布的博客
+    """
+    target_user = get_object_or_404(User, id=user_id)
+    try:
+        profile = target_user.profile
+    except Profile.DoesNotExist:
+        profile = None
+
+    user_blogs = Blog.objects.filter(author=target_user).order_by('-pub_time')
+    context = {
+        'target_user': target_user,
+        'profile': profile,
+        'user_blogs': user_blogs
+    }
+
+    return render(request, 'registration/user_profile.html', context)
+

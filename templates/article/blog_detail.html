@@ -50,10 +50,10 @@
     /* 博客内容中的图片样式 (如果未在 base.css 全局控制，这里可以加上) - 保持不变 */
     .blog-content img,
     .w-e-text-container img {
-        max-width: 100%;
+        max-width: 85%;
         height: auto;
         display: block;
-        margin: 0 auto;
+        margin: -1 auto;
     }
     /* 为统计信息添加一些样式，使其在同一行 */
     .blog-stats {
@@ -104,8 +104,10 @@
 <h2>{{ blog.title }}</h2>
 <hr>
 <div class="mt-2">
+<a href="{% url 'qxauth:user_profile' user_id=blog.author.id %}">
     <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
         class="rounded-circle" width="30" alt="">
+</a>
     <span class="ms-2 author-name">{{ blog.author.username }}</span>
     <span class="ms-2">发布时间：</span>
     <span class="font-monospace">{{ blog.pub_time|date:'Y-m-d H:i' }}</span>

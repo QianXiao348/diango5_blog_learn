@@ -25,8 +25,7 @@ urlpatterns = [
              success_url=reverse_lazy('qxauth:password_change_done'))),
          name='password_change'),
     # 修改密码成功提示页
-    path(
-        'password_change/done',
+    path('password_change/done',
         PasswordChangeDoneView.as_view(template_name='registration/spassword_change_done.html'),
         name='password_change_done'
     ),
@@ -57,4 +56,5 @@ urlpatterns = [
              template_name='registration/password_reset_complete.html'
          ),
          name='password_reset_complete'),
+    path('user/<int:user_id>/', views.user_frofile, name='user_profile'),
 ]

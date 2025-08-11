@@ -28,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# 增加文件上传的内存限制 设置为 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
 
 # Application definition
 

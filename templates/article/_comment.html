@@ -7,8 +7,10 @@
     <div class="comment-item comment-level-{{ comment.display_level }}">
         <div class="d-flex justify-content-between text-body-secondary mb-2">
             <div class="user-info d-flex align-items-center">
+            <a href="{% url 'qxauth:user_profile' user_id=comment.author.id %}">
                 <img src="{% if comment.author.profile.avatar %}{{ comment.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
                     class="rounded-circle" width="40" height="40" alt="{{ comment.author.username }}的头像">
+            </a>
                 <span class="ms-2 fw-bold">{{ comment.author.username }}</span>
                 {% comment %} 如果是回复，并且你想显示回复给谁 {% endcomment %}
                 {% if comment.parent and comment.parent.author %}
