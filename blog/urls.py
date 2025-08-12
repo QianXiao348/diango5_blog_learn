@@ -37,4 +37,6 @@ urlpatterns = [
     path('blog/like/<int:blog_id>', views.toggle_like, name='toggle_like'),
     # 分类展示 URL
     path('blog/category/<int:category_id>', views.category_blogs, name='category_blogs'),
+    # 关注
+    path('user/<int:user_id>/follow/', views.toggle_follow, name='toggle_follow')
 ]

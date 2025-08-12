@@ -12,8 +12,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render, redirect, reverse
 from django.http.response import JsonResponse
+from django.core.paginator import Paginator
+from django.utils import timezone
 
-from .models import Profile
+from .models import Profile, Follow
 from .forms import RegisterForm, LoginForm, ProfileForm
 from blog.models import Blog
 
@@ -97,10 +99,11 @@ def send_email_captcha(request):
     
     return JsonResponse({"code":200, "message": "邮箱验证码发送成功！"})
 
-# 修改用户信息
+
 @require_http_methods(['GET', 'POST'])
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def edit_profile(request, user_id):
+    """修改用户信息"""
     user = User.objects.get(id=user_id)
     if Profile.objects.filter(user_id=user_id).exists():
         # user_id 是 OneToOneField 自动生成的字段
@@ -153,10 +156,27 @@ def user_frofile(request, user_id):
         profile = None
 
     user_blogs = Blog.objects.filter(author=target_user).order_by('-pub_time')
+    paginator = Paginator(user_blogs, 6)
+    page_num = request.GET.get('page')
+    blogs_paginated = paginator.get_page(page_num)
+
+    is_following = False
+    if request.user.is_authenticated and request.user != target_user:
+        is_following = Follow.objects.filter(follower=request.user, followed=target_user).exists()
+
+    followed_count = target_user.follower.count()  # 获取粉丝数量
+    follower_count = target_user.followed.count()  # 获取关注数
+    blog_count = user_blogs.count()  # 获取博客数量
+    garden_age = (timezone.now() - target_user.date_joined).days
     context = {
         'target_user': target_user,
         'profile': profile,
-        'user_blogs': user_blogs
+        'user_blogs': blogs_paginated,
+        'blog_count': blog_count,
+        'garden_age': garden_age,
+        'is_following': is_following,
+        'followed_count': followed_count,
+        'follower_count': follower_count,
     }
 
     return render(request, 'registration/user_profile.html', context)

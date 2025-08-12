@@ -9,11 +9,14 @@ from django.db.models import Q, F, Count
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.core.files.storage import default_storage
+from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
 
 from .moderation import moderate_content
 from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike
+from qxauth.models import Follow
 from .forms import PubBlogForm, PubCommentForm
+
 
 def index(request):
     """
@@ -69,7 +72,8 @@ def blog_detail(request, blog_id):
         is_liked = BlogLike.objects.filter(blog=blog, user=request.user).exists()
 
     # 获取顶级评论
-    comment_list = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author', 'reply_to').order_by(
+    comment_list = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author',
+                                                                                             'reply_to').order_by(
         'tree_id', 'lft')
     processed_comments = []
     for comment in comment_list:
@@ -452,3 +456,49 @@ def toggle_like(request, blog_id):
             )
 
         return JsonResponse({'code': 200, 'msg': '点赞成功！', 'like_count': blog.like_count})
+
+
+@require_POST
+@login_required(login_url=reverse_lazy('qxauth:login'))
+def toggle_follow(request, user_id):
+    """
+    关注用户/取消关注
+    """
+    User = get_user_model()
+    profile_user = get_object_or_404(User, id=user_id)
+    follower = request.user
+
+    if profile_user == follower:
+        return JsonResponse({'code': 400, 'msg': '不能关注自己！'})
+
+    try:
+        follow_ralation = Follow.objects.get(followed=profile_user, follower=follower)
+        follow_ralation.delete()
+        is_following = False
+        msg = '取消关注成功'
+    except Follow.DoesNotExist:
+        try:
+            Follow.objects.create(followed=profile_user, follower=follower)
+            is_following = True
+            msg = '关注成功'
+            # 创建关注通知
+            Notification.objects.create(
+                actor=follower,
+                recipient=profile_user,
+                verb='关注了你',
+                description=f'{follower.username} 关注了你。',
+                target_url=reverse('blog:user_profile', args=[follower.id])
+            )
+        except IntegrityError:
+            # 以防并发请求导致重复创建
+            is_following = True
+            msg = '已关注'
+    # 关注数
+    followers_count = profile_user.followers.count()
+
+    return JsonResponse({
+        "code": 200,
+        "message": msg,
+        "is_following": is_following,
+        "followers_count": followers_count
+    })

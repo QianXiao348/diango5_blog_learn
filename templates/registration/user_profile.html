@@ -8,31 +8,49 @@
     <div class="row">
         <div class="col-md-8 offset-md-2">
             <div class="card p-4 shadow-sm">
-                <div class="d-flex align-items-center">
-                    <img src="{% if profile and profile.avatar %}{{ profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
-                         class="rounded-circle" width="100" height="100" style="object-fit: cover;" alt="头像">
-                    <div class="ms-4">
-                        <h2>{{ target_user.username }}</h2>
-                        {% if profile and profile.bio %}
-                            <p class="text-muted">{{ profile.bio }}</p>
-                        {% else %}
-                            <p class="text-muted">这个人很懒，什么都没写。</p>
-                        {% endif %}
+                <div class="d-flex align-items-center justify-content-between">
+                    {# 左侧：头像 #}
+                    <div class="d-flex align-items-center">
+                        <img src="{% if profile and profile.avatar %}{{ profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
+                             class="rounded-circle me-4" width="100" height="100" style="object-fit: cover;" alt="头像">
+                        <div class="user-info-text">
+                            <h2 class="mb-1">{{ target_user.username }}</h2>
+                            <p class="text-muted">园龄：{{ garden_age }}天</p>
+                            <p class="text-muted">文章：{{ blog_count }}</p>
+                            <p class="text-muted">粉丝：<span id="followers-count-display">{{ followed_count }}</span></p>
+                            <p class="text-muted">关注：<span id="following-count-display">{{ follower_count }}</span></p>
+                        </div>
                     </div>
+
+                    {# 右侧：关注按钮 #}
+                    {% if request.user.is_authenticated and request.user != target_user %}
+                    <div>
+                        <button id="toggle-follow-btn"
+                                data-user-id="{{ target_user.id }}"
+                                class="btn {% if is_following %}btn-secondary{% else %}btn-primary{% endif %}">
+                            {% if is_following %}
+                                已关注
+                            {% else %}
+                                + 加关注
+                            {% endif %}
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
                 <hr>
                 <div class="user-info-section">
-                    <h4>个人信息</h4>
+{#                    <h4>个人信息</h4>#}
                     <ul>
                         <li><strong>邮箱:</strong> {{ target_user.email }}</li>
                         {% if profile and profile.birth %}
                         <li><strong>生日:</strong> {{ profile.birth|date:"Y-m-d" }}</li>
                         {% endif %}
+                        <li><strong>性别:</strong> {{ profile.get_gender_display }}</li>
                     </ul>
                 </div>
                 <hr>
                 <div class="user-blogs-section">
-                    <h4>{{ target_user.username }} 的博客</h4>
+                    <h4>个人博客</h4>
                     {% if user_blogs %}
                         <div class="list-group">
                         {% for blog in user_blogs %}
@@ -42,6 +60,32 @@
                             </a>
                         {% endfor %}
                         </div>
+
+                        {% if user_blogs.paginator.num_pages > 1 %}
+                        <nav aria-label="博客分页" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if user_blogs.has_previous %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.previous_page_number }}">上一页</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">上一页</span></li>
+                                {% endif %}
+                                {% for num in user_blogs.paginator.page_range %}
+                                    {% if user_blogs.number == num %}
+                                        <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+                                    {% elif num > user_blogs.number|add:'-3' and num < user_blogs.number|add:'3' %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if user_blogs.has_next %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.next_page_number }}">下一页</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">下一页</span></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        {# =============================================== #}
+
                     {% else %}
                         <p class="text-muted">该用户还没有发表任何博客。</p>
                     {% endif %}
@@ -50,4 +94,67 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        const toggleFollowBtn = $('#toggle-follow-btn');
+        const followersCountDisplay = $('#followers-count-display');
+
+        if (toggleFollowBtn.length) {
+            toggleFollowBtn.on('click', function() {
+                const userId = $(this).data('user-id');
+
+                $.ajax({
+                    url: `{% url 'blog:toggle_follow' user_id=0 %}`.replace('0', userId),
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    success: function(response) {
+                        if (response.code === 200) {
+                            // 更新按钮状态
+                            if (response.is_following) {
+                                toggleFollowBtn.text('已关注').removeClass('btn-primary').addClass('btn-secondary');
+                            } else {
+                                toggleFollowBtn.text('+ 加关注').removeClass('btn-secondary').addClass('btn-primary');
+                            }
+                            // 更新粉丝数量
+                            followersCountDisplay.text(response.followers_count);
+                        } else {
+                            alert(response.msg);
+                            console.error("关注操作失败:", response.msg);
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        let errorMsg = "网络错误或服务器异常，请重试。";
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
+                            errorMsg = jqXHR.responseJSON.msg;
+                        } else if (jqXHR.status === 403) {
+                            errorMsg = '请先登录！';
+                        }
+                        alert(errorMsg);
+                    }
+                });
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
 {% endblock %}
