@@ -458,6 +458,7 @@ def toggle_like(request, blog_id):
         return JsonResponse({'code': 200, 'msg': '点赞成功！', 'like_count': blog.like_count})
 
 
+@csrf_exempt
 @require_POST
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def toggle_follow(request, user_id):
@@ -472,8 +473,8 @@ def toggle_follow(request, user_id):
         return JsonResponse({'code': 400, 'msg': '不能关注自己！'})
 
     try:
-        follow_ralation = Follow.objects.get(followed=profile_user, follower=follower)
-        follow_ralation.delete()
+        follow_relation = Follow.objects.get(followed=profile_user, follower=follower)
+        follow_relation.delete()
         is_following = False
         msg = '取消关注成功'
     except Follow.DoesNotExist:
@@ -487,7 +488,7 @@ def toggle_follow(request, user_id):
                 recipient=profile_user,
                 verb='关注了你',
                 description=f'{follower.username} 关注了你。',
-                target_url=reverse('blog:user_profile', args=[follower.id])
+                target_url=reverse('qxauth:user_profile', args=[follower.id])
             )
         except IntegrityError:
             # 以防并发请求导致重复创建

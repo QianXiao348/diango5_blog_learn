@@ -17,8 +17,8 @@
                             <h2 class="mb-1">{{ target_user.username }}</h2>
                             <p class="text-muted">园龄：{{ garden_age }}天</p>
                             <p class="text-muted">文章：{{ blog_count }}</p>
-                            <p class="text-muted">粉丝：<span id="followers-count-display">{{ followed_count }}</span></p>
-                            <p class="text-muted">关注：<span id="following-count-display">{{ follower_count }}</span></p>
+                            <p class="text-muted">粉丝：<span id="followers-count-display">{{ followers_count }}</span></p>
+                            <p class="text-muted">关注：<span id="following-count-display">{{ followeds_count }}</span></p>
                         </div>
                     </div>
 
@@ -84,8 +84,6 @@
                             </ul>
                         </nav>
                         {% endif %}
-                        {# =============================================== #}
-
                     {% else %}
                         <p class="text-muted">该用户还没有发表任何博客。</p>
                     {% endif %}
@@ -94,9 +92,7 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
 <script>
     $(document).ready(function() {
@@ -108,30 +104,28 @@
                 const userId = $(this).data('user-id');
 
                 $.ajax({
-                    url: `{% url 'blog:toggle_follow' user_id=0 %}`.replace('0', userId),
+                    url: `/user/${userId}/follow/`,
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
                     success: function(response) {
                         if (response.code === 200) {
-                            // 更新按钮状态
                             if (response.is_following) {
                                 toggleFollowBtn.text('已关注').removeClass('btn-primary').addClass('btn-secondary');
                             } else {
                                 toggleFollowBtn.text('+ 加关注').removeClass('btn-secondary').addClass('btn-primary');
                             }
-                            // 更新粉丝数量
                             followersCountDisplay.text(response.followers_count);
                         } else {
-                            alert(response.msg);
-                            console.error("关注操作失败:", response.msg);
+                            alert(response.message);
+                            console.error("关注操作失败:", response.message);
                         }
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
                         let errorMsg = "网络错误或服务器异常，请重试。";
-                        if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
-                            errorMsg = jqXHR.responseJSON.msg;
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                            errorMsg = jqXHR.responseJSON.message;
                         } else if (jqXHR.status === 403) {
                             errorMsg = '请先登录！';
                         }

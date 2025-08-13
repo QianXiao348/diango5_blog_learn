@@ -30,13 +30,13 @@ class Follow(models.Model):
     follower = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='follower',
+        related_name='following',
         verbose_name='关注者'
     )
     followed = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followed',
+        related_name='followers',
         verbose_name='被关注者'
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='关注时间')

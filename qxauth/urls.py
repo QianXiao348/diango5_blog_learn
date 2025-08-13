@@ -56,5 +56,6 @@ urlpatterns = [
              template_name='registration/password_reset_complete.html'
          ),
          name='password_reset_complete'),
+    # 用户信息
     path('user/<int:user_id>/', views.user_frofile, name='user_profile'),
 ]

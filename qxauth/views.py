@@ -14,6 +14,7 @@ from django.shortcuts import render, redirect, reverse
 from django.http.response import JsonResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
 
 from .models import Profile, Follow
 from .forms import RegisterForm, LoginForm, ProfileForm
@@ -21,9 +22,9 @@ from blog.models import Blog
 
 User = get_user_model()
 
-# 用户登录
 @require_http_methods(['GET', 'POST'])
 def qxlogin(request):
+    """ 用户登录 """
     if request.method == 'GET':
         return render(request, 'registration/login.html')
     else:
@@ -39,6 +40,7 @@ def qxlogin(request):
                     # 默认的session会保留2周，反过来处理不需要记住我，设置过期时间位0
                     request.session.set_expiry(0)
                 return redirect('/')  # 登录成功后跳转到首页
+                # return JsonResponse({'code': 200, "message": "登录成功"})
             else:
                 print("邮箱或密码错误！")
                 return JsonResponse({'code':401,"message":"注册输入有误。请再次检查输入邮箱或密码是否符合标准，并重新输入~"})
@@ -164,10 +166,11 @@ def user_frofile(request, user_id):
     if request.user.is_authenticated and request.user != target_user:
         is_following = Follow.objects.filter(follower=request.user, followed=target_user).exists()
 
-    followed_count = target_user.follower.count()  # 获取粉丝数量
-    follower_count = target_user.followed.count()  # 获取关注数
+    followeds_count = target_user.following.count()
+    followers_count_for_template = target_user.followers.count()
     blog_count = user_blogs.count()  # 获取博客数量
     garden_age = (timezone.now() - target_user.date_joined).days
+
     context = {
         'target_user': target_user,
         'profile': profile,
@@ -175,8 +178,8 @@ def user_frofile(request, user_id):
         'blog_count': blog_count,
         'garden_age': garden_age,
         'is_following': is_following,
-        'followed_count': followed_count,
-        'follower_count': follower_count,
+        'followeds_count': followeds_count,
+        'followers_count': followers_count_for_template,
     }
 
     return render(request, 'registration/user_profile.html', context)
