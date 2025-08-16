@@ -1,8 +1,10 @@
 import datetime
+import json
+
 from django.shortcuts import get_object_or_404, render, redirect, reverse
 from django.http.response import JsonResponse
 from django.urls.base import reverse_lazy
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.db.models import Q, F, Count
@@ -10,10 +12,11 @@ from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
 
 from .moderation import moderate_content
-from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike
+from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike, ModerationLog, User
 from qxauth.models import Follow
 from .forms import PubBlogForm, PubCommentForm
 
@@ -186,20 +189,27 @@ def pub_blog(request):
             is_title_safe, title_moderation_msg = moderate_content(title)
             is_content_safe, content_moderation_msg = moderate_content(content)
 
-            if not is_title_safe:
-                return JsonResponse({'code': 400, 'msg': f'标题审核失败：{title_moderation_msg}'})
-            if not is_content_safe:
-                return JsonResponse({'code': 400, 'msg': f'内容审核失败：{content_moderation_msg}'})
+            # 智能审查未通过，不立即发布，而是创建待审核日志
+            if not is_title_safe or not is_content_safe:
+                ModerationLog.objects.create(
+                    content_type='blog',
+                    content_id=None,
+                    original_content=f'标题: {title}\n内容: {content}',
+                    flagged_by_ai=True,
+                    reazon=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
+                    status='pending',
+                    author=request.user,
+                    category=form.cleaned_data.get('category'),
+                )
+                return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核，请等待管理员审核。'})
 
+            # 审核通过，正常保存
             # 使用 form.save(commit=False) 获取模型实例，但不立即保存到数据库
             blog = form.save(commit=False)
-            blog.author = request.user  # 设置作者为当前登录用户
-
-            blog.save()  # 将完整的博客实例保存到数据库
-
+            blog.author = request.user
+            blog.save()
             return JsonResponse({'code': 200, 'msg': '发布成功！', 'data': {'blog_id': blog.id}})
         else:
-            print(form.errors)
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
 
 
@@ -232,9 +242,26 @@ def pub_comment(request, blog_id, parent_comment_id=None):
 
     # ai审核
     is_safe, moderation_msg = moderate_content(content)
-    if not is_safe:
-        return JsonResponse({'code': 400, 'msg': f'用语不规范：{moderation_msg}'})
 
+    if not is_safe:
+        comment_content = {
+            'content': content,
+            'blog_id': blog_id,
+            'parent_comment_id': parent_comment_id,
+            'reply_to_user_id': reply_to_user_id
+        }
+        ModerationLog.objects.create(
+            content_type='comment',
+            content_id=None,
+            original_content=json.dumps(comment_content, ensure_ascii=False),  # 将字典转换为 JSON 字符串
+            flagged_by_ai=True,
+            reazon=moderation_msg,
+            status='pending',
+            author=request.user
+        )
+        return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核，请等待管理员审核。'})
+
+    # 审核通过，保存评论
     new_comment = form.save(commit=False)
     new_comment.blog = blog
     new_comment.author = request.user
@@ -326,10 +353,9 @@ def delete_comment(request, comment_id):
         return JsonResponse({'code': 500, 'msg': f'删除评论失败：{e}'})
 
 
-# 查找视图函数
 @require_GET
 def search(request):
-    # /search?q=xxx
+    """ 查找视图函数 /search?q=xxx """
     q = request.GET.get('q')
     # 从博客标题和内容进行查找
     blogs = Blog.objects.filter(Q(title__icontains=q) | Q(content__icontains=q)).all()
@@ -370,7 +396,7 @@ def notifications_list(request):
     """
     通知列表
     """
-    notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+    notifications = Notification.objects.filter(recipient=request.user).order_by('created_at')
     return render(request, 'notifications/list.html', context={'notifications': notifications})
 
 
@@ -458,7 +484,7 @@ def toggle_like(request, blog_id):
         return JsonResponse({'code': 200, 'msg': '点赞成功！', 'like_count': blog.like_count})
 
 
-@csrf_exempt
+# @csrf_exempt
 @require_POST
 @login_required(login_url=reverse_lazy('qxauth:login'))
 def toggle_follow(request, user_id):
@@ -503,3 +529,105 @@ def toggle_follow(request, user_id):
         "is_following": is_following,
         "followers_count": followers_count
     })
+
+
+def is_moderator(user):
+    """判断用户是否是管理员或具有特定权限"""
+    return user.is_superuser
+
+
+@user_passes_test(is_moderator, login_url=reverse_lazy('qxauth:login'))
+def moderation_queue(request):
+    """
+    审核队列
+    """
+    pending_logs = ModerationLog.objects.filter(status='pending')
+    context = {
+        'pending_logs': pending_logs,
+    }
+    return render(request, 'article/moderation_queue.html', context)
+
+
+@user_passes_test(is_moderator, login_url=reverse_lazy('qxauth:login'))
+def review_action(request, log_id, action):
+    """
+    审核操作
+    """
+    log = get_object_or_404(ModerationLog, id=log_id, status='pending')
+    verb = "博客内容"
+    if action == 'approve':
+        log.status = 'approved'
+        log.reviewed_at = timezone.now()
+        log.moderator = request.user
+        log.save()
+
+        target_url = ""
+        if log.content_type == 'blog':
+            lines = log.original_content.split('\n', 1)
+            title = lines[0].replace('标题: ', '').strip()
+            content = lines[1].replace('内容: ', '').strip()
+            new_blog = Blog.objects.create(
+                author=log.author,
+                category=log.category,
+                title=title,
+                content=content,
+                pub_time=timezone.now()
+            )
+            log.content_id = new_blog.id
+            target_url = reverse('blog:blog_detail', args=[new_blog.id])
+        elif log.content_type == 'comment':
+            verb = "评论内容"
+            comment_data = json.loads(log.original_content)
+
+            # # 获取父评论和回复用户对象
+            parent_comment = None
+            if comment_data.get('parent_comment_id'):
+                parent_comment = BlogComment.objects.get(id=comment_data['parent_comment_id'])
+
+            reply_to_user = None
+            if comment_data.get('reply_to_user'):
+                reply_to_user = User.objects.get(id=comment_data['reply_to_user_id'])
+
+            new_comment = BlogComment.objects.create(
+                content=comment_data['content'],
+                blog=comment_data['blog_id'],
+                author=log.author,
+                parent=parent_comment,
+                reply_to=reply_to_user
+            )
+            log.content_id = new_comment.id
+            log.save()
+            target_url = reverse('blog:blog_detail', args=[comment_data['blog_id']]) + f'#comment-{new_comment.id}'
+        else:
+            return JsonResponse({'code': 400, 'msg': '未知内容类型！'})
+
+        # 创建审核通过通知
+        Notification.objects.create(
+            actor=log.moderator,
+            recipient=log.author,
+            verb=verb,
+            description=f'你的内容已通过审核。',
+            target_url=target_url
+        )
+        return JsonResponse({'code': 200, 'msg': '内容已通过审核并发布！'})
+    elif action == 'reject':
+        log.status = 'rejected'
+        log.reviewed_at = timezone.now()
+        log.moderator = request.user
+        log.save()
+
+        target_url = ""
+        if log.content_type == 'blog':
+            target_url = reverse('blog:blog_detail', args=[log.content_id]) if log.content_id else reverse('blog:index')
+        elif log.content_type == 'comment':
+            verb = "评论内容"
+            target_url = reverse('blog:blog_detail', args=[log.blog_id]) if log.blog_id else reverse('blog:index')
+        # 创建审核拒绝通知
+        Notification.objects.create(
+            actor=log.moderator,
+            recipient=log.author,
+            verb=verb,
+            description=f'你的内容被拒绝了。',
+            target_url=target_url
+        )
+        return JsonResponse({'code': 200, 'msg': '内容已拒绝！'})

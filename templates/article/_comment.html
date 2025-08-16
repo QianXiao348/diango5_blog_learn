@@ -4,7 +4,7 @@
 
 <li class="list-group-item">
     {# 核心修改：使用 comment.display_level 来控制缩进样式 #}
-    <div class="comment-item comment-level-{{ comment.display_level }}">
+    <div class="comment-item comment-level-{{ comment.level }}">
         <div class="d-flex justify-content-between text-body-secondary mb-2">
             <div class="user-info d-flex align-items-center">
             <a href="{% url 'qxauth:user_profile' user_id=comment.author.id %}">

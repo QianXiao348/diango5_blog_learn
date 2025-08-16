@@ -1,73 +1,136 @@
 // static/js/pub_blog.js
+$(document).ready(function() {
+    // CSRF Token 获取函数 (保持不变)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
-window.onload = function () {
     const {createEditor, createToolbar} = window.wangEditor
+    const uploadImageUrl = "{% url 'blog:get_image_for_blog' %}";
 
+    // WangEditor 配置
     const editorConfig = {
         placeholder: '请输入博客内容...',
         onChange(editor) {
-            const html = editor.getHtml()
-            // console.log('editor content', html) // 调试用，可以保留或移除
-            // 将编辑器内容同步到隐藏的 <textarea>
-            document.getElementById('editor-content-textarea').value = html;
+            const html = editor.getHtml();
+            $('#editor-content-textarea').val(html);
         },
-        // 配置上传图片的接口
         MENU_CONF: {
             uploadImage: {
-                server: uploadImageUrl, 
-                fieldName: 'image_file', 
+                server: uploadImageUrl,
+                fieldName: 'image_file',
                 headers: {
-                    'X-CSRFToken': $("input[name='csrfmiddlewaretoken']").val(), // 从隐藏的 CSRF input 获取
+                    'X-CSRFToken': getCookie('csrftoken'),
                 },
             }
         }
-    }
+    };
 
     const editor = createEditor({
         selector: '#editor-container',
-        html: '<p><br></p>', 
+        html: '<p><br></p>',
         config: editorConfig,
-        mode: 'default', 
+        mode: 'default',
     })
 
-    const toolbarConfig = {} 
-
+    const toolbarConfig = {};
     const toolbar = createToolbar({
         editor,
         selector: '#toolbar-container',
         config: toolbarConfig,
-        mode: 'default', 
-    })
+        mode: 'default',
+    });
 
-    $("#submit-btn").click(function(event){
+    // 获取DOM元素
+    const submitBtn = $('#submit-btn');
+    const pubBlogForm = $('#pub-blog-form');
+    const titleInput = $('#id-title');
+    const categorySelect = $('#category-select');
+    const contentTextarea = $('#editor-content-textarea');
+    const publishMessageDiv = $('#publish-message');
+
+    // 监听发布按钮的点击事件
+    submitBtn.on('click', function(event) {
         event.preventDefault();
 
-        // 在提交前，确保 wangEditor 的最新内容已同步到隐藏的 textarea (onChange 已经处理，这里可省略)
-        // editorConfig.onChange(editor); // 如果 onChange 逻辑完整，这里不是必须
+        // 清除之前的错误信息
+        $('.form-error-message').text('');
+        publishMessageDiv.empty();
 
-        let title = $("input[name='title']").val();
-        let category = $("#category-select").val(); // <<-- 请再次确认 HTML 中的 ID 是 "category-select" 还是 "id_category"
-        let content = $("#editor-content-textarea").val(); // <<-- 从隐藏的 textarea 获取内容
-        let csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']").val();
+        const title = titleInput.val();
+        const categoryId = categorySelect.val();
+        const content = contentTextarea.val();
+        const csrfToken = getCookie('csrftoken');
+        const blogDetailUrlTemplate = "{% url 'blog:blog_detail' blog_id=0 %}";
 
-        $.ajax('/blog/pub', {
+        // 简单前端验证
+        if (!title.trim()) {
+            $('#title-error').text('标题不能为空！');
+            return;
+        }
+        if (!content.trim()) {
+            $('#content-error').text('内容不能为空！');
+            return;
+        }
+
+        const postData = {
+            'title': title,
+            'category': categoryId,
+            'content': content,
+            'csrfmiddlewaretoken': csrfToken
+        };
+
+        // 发送 AJAX 请求到 Django 后端，并使用 success/error 回调处理
+        $.ajax({
+            url: pubBlogForm.attr('action'),
             method: 'POST',
-            data: {title, category, content, csrfmiddlewaretoken},
-            success: function(result){
-                if(result['code'] == 200){
-                    let blog_id = result['data']['blog_id']
-                    const redirectUrlTemplate = $("#submit-btn").data('redirect-url'); 
-                    window.location.href = redirectUrlTemplate.replace('0', blog_id);
-                }else{
-                    // 这里 alert result['message']，但后端返回的是 result['msg']
-                    alert(result['msg']); 
-                    console.error("发布博客失败:", result); 
+            data: postData,
+            success: function(response, textStatus, jqXHR) {
+                // success 回调只在 HTTP 状态码为 200-299 时执行
+                // 你的后端返回 200 和 202，所以这里都会被捕获
+                if (jqXHR.status === 200) {
+                    alert('发布成功！');
+                    const newBlogId = response.data.blog_id;
+                    const redirectUrl = blogDetailUrlTemplate.replace('0', newBlogId);
+                    window.location.href = redirectUrl;
+                } else if (jqXHR.status === 202) {
+                    // 后端返回的msg字段用于审核提示
+                    const warningAlert = `<div class="alert alert-warning" role="alert">${response.msg}</div>`;
+                    publishMessageDiv.html(warningAlert);
+                    alert(response.msg);
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error("AJAX 发布请求失败:", textStatus, errorThrown, jqXHR.responseText);
-                alert("网络请求失败，请稍后再试。");
+                // error 回调处理所有非 2xx 状态码
+                const status = jqXHR.status;
+                const response = jqXHR.responseJSON || { msg: '未知错误' };
+
+                if (status === 400) {
+                    alert('发布失败：' + response.msg);
+                    if (response.errors) {
+                        for (const key in response.errors) {
+                            $(`#${key}-error`).text(response.errors[key].join(' '));
+                        }
+                    }
+                } else if (status === 500) {
+                    alert('服务器内部错误，请稍后再试。');
+                    console.error('AJAX Error:', jqXHR);
+                } else {
+                    alert('网络错误或服务器异常：' + response.msg);
+                    console.error('AJAX 错误:', jqXHR.status, textStatus, errorThrown);
+                }
             }
-        })
+        });
     });
-}
+});

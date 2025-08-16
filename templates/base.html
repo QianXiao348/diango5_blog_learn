@@ -28,6 +28,21 @@
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                 <li><a href="/" class="nav-link px-2 text-white">首页</a></li>
                 <li><a href="{% url 'blog:pub_blog' %}" class="nav-link px-2 text-white">发布博客</a></li>
+            
+            {% if request.user.is_superuser %}
+                <li>
+                    <a href="{% url 'blog:moderation_queue' %}" class="nav-link px-2 text-white">
+                        审核
+                        {# 可选：显示待审核数量 #}
+                        {% if pending_moderation_count %}
+                            <span class="badge bg-danger rounded-pill">
+                                {{ pending_moderation_count }}
+                            </span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endif %}
+            
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         分类
@@ -70,7 +85,7 @@
                     <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true"> 
                         <img src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle"> 
                     </a>
-                    <ul class="dropdown-menu text-small show"
+                    <ul class="dropdown-menu text-small"
                         style="position: absolute; inset: auto auto 0px 0px; margin: 0px; transform: translate3d(0px, -34px, 0px);"
                         data-popper-placement="top-start">
                         <li><a class="dropdown-item" href="{% url 'qxauth:logout' %}">退出登录</a></li>

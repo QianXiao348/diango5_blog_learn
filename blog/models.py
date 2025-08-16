@@ -117,7 +117,52 @@ class Notification(models.Model):
     class Meta:
         verbose_name = '通知'
         verbose_name_plural = verbose_name
-        ordering = ['-created_at']
+        ordering = ['created_at']
 
     def __str__(self):
         return f'{self.recipient.username} - {self.verb} - {self.content[:30]}'
+
+
+class ModerationLog(models.Model):
+    """
+    内容审核日志
+    """
+    CONTENT_TYPES = [
+        ('blog', '博客文章'),
+        ('comment', '评论'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', '待审核'),
+        ('approved', '已通过'),
+        ('rejected', '已拒绝'),
+    ]
+    content_type = models.CharField(max_length=20, choices=CONTENT_TYPES, verbose_name='内容类型')
+    content_id = models.PositiveIntegerField(verbose_name='内容ID', null=True, blank=True)
+    original_content = models.TextField(verbose_name='原始内容')
+    flagged_by_ai = models.BooleanField(default=False, verbose_name='是否由AI标记')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, verbose_name='审核状态')
+    reazon = models.TextField(blank=True, verbose_name='标记原因')
+    category = models.ForeignKey(
+        BlogCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='博客分类'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name='发布作者', related_name='moderation_logs'
+    )
+    moderator = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='审核人员',
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name='复核时间')
+
+    class Meta:
+        verbose_name = '内容审核日志'
+        verbose_name_plural = verbose_name
+        ordering = ['created_at']

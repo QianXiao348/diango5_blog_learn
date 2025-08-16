@@ -38,5 +38,9 @@ urlpatterns = [
     # 分类展示 URL
     path('blog/category/<int:category_id>', views.category_blogs, name='category_blogs'),
     # 关注
-    path('user/<int:user_id>/follow/', views.toggle_follow, name='toggle_follow')
+    path('user/<int:user_id>/follow/', views.toggle_follow, name='toggle_follow'),
+    # 审核
+    path('moderation/queue/', views.moderation_queue, name='moderation_queue'),
+    # 审核操作
+    path('moderation/action/<int:log_id>/<str:action>/', views.review_action, name='review_action'),
 ]

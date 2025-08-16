@@ -1,0 +1,74 @@
+{# templates/blog/moderation_queue.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}审核队列{% endblock %}
+
+{% block main %}
+    <h2>待审核内容</h2>
+    {% if pending_logs %}
+        <div class="list-group">
+            {% for log in pending_logs %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1 me-3">
+                        <small class="text-muted">{{ log.get_content_type_display }} by {{ log.author.username }}</small>
+                        <p class="mb-1">{{ log.original_content|truncatechars:100 }}</p>
+                        <small class="text-danger">原因: {{ log.reason }}</small>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-success btn-sm review-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
+                        <button type="button" class="btn btn-danger btn-sm review-btn" data-log-id="{{ log.id }}" data-action="reject">拒绝</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-center text-muted mt-3">目前没有待审核内容。</p>
+    {% endif %}
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        $('.review-btn').on('click', function() {
+            const btn = $(this);
+            const logId = btn.data('log-id');
+            const action = btn.data('action');
+
+            if (!confirm(`确定要 ${action === 'approve' ? '通过' : '拒绝'} 这条内容吗？`)) {
+                return;
+            }
+
+            $.ajax({
+                url: `/moderation/action/${logId}/${action}/`,
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                success: function(response) {
+                    alert(response.msg);
+                    if (response.code === 200) {
+                        btn.closest('.list-group-item').remove();
+                    }
+                },
+                error: function(jqXHR) {
+                    alert('操作失败！');
+                    console.error('AJAX Error:', jqXHR);
+                }
+            });
+        });
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}
