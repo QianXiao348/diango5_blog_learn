@@ -12,7 +12,10 @@
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1 me-3">
                         <small class="text-muted">{{ log.get_content_type_display }} by {{ log.author.username }}</small>
-                        <p class="mb-1">{{ log.original_content|truncatechars:100 }}</p>
+                        {# 修正：将内容变为可点击的链接，指向详情页 #}
+                        <a href="{% url 'blog:moderation_detail' log_id=log.id %}" class="d-block text-dark fw-bold text-decoration-none">
+                            <p class="mb-1">{{ log.original_content|truncatechars:100 }}</p>
+                        </a>
                         <small class="text-danger">原因: {{ log.reason }}</small>
                     </div>
                     <div class="btn-group" role="group">

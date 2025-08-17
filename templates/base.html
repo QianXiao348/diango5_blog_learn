@@ -28,21 +28,17 @@
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                 <li><a href="/" class="nav-link px-2 text-white">首页</a></li>
                 <li><a href="{% url 'blog:pub_blog' %}" class="nav-link px-2 text-white">发布博客</a></li>
-            
-            {% if request.user.is_superuser %}
+
+             {% if request.user.is_superuser %}
                 <li>
                     <a href="{% url 'blog:moderation_queue' %}" class="nav-link px-2 text-white">
                         审核
-                        {# 可选：显示待审核数量 #}
-                        {% if pending_moderation_count %}
-                            <span class="badge bg-danger rounded-pill">
-                                {{ pending_moderation_count }}
-                            </span>
-                        {% endif %}
+                        {# 待审核数量的占位符 #}
+                        <span id="pending-moderation-count" class="badge bg-danger rounded-pill"></span>
                     </a>
                 </li>
-                {% endif %}
-            
+            {% endif %}
+
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         分类
@@ -56,7 +52,7 @@
                     </ul>
                 </li>
             </ul>
-            
+
             {# 搜索框 - 增加 me-3 (margin-right: 1rem) 将它向左推一点 #}
             <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-3" role="search" action="{% url 'blog:search' %}">
                 <input type="search" name="q" class="form-control form-control-dark text-bg-white" placeholder="搜索 ..." aria-label="Search">
@@ -82,8 +78,8 @@
             {# 这里不再包含通知选项，因为它已经作为独立的铃铛图标显示在外面了 #}
             {% if user.is_authenticated %}
                 <div class="dropdown text-end">
-                    <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true"> 
-                        <img src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle"> 
+                    <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true">
+                        <img src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle">
                     </a>
                     <ul class="dropdown-menu text-small"
                         style="position: absolute; inset: auto auto 0px 0px; margin: 0px; transform: translate3d(0px, -34px, 0px);"
@@ -106,6 +102,56 @@
 <main class="container bg-white p-3 rounded">
     {% block main %}{% endblock %}
 </main>
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        // CSRF Token 获取函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 仅在用户为管理员时执行此脚本
+        {% if request.user.is_superuser %}
+        const moderationBadge = $('#pending-moderation-count');
+
+        function getModerationCount() {
+            $.ajax({
+                url: "{% url 'blog:get_moderation_count' %}",
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200 && response.data.count > 0) {
+                        moderationBadge.text(response.data.count).show();
+                    } else {
+                        moderationBadge.hide();
+                    }
+                },
+                error: function(xhr) {
+                    console.error("Failed to get moderation count:", xhr.responseJSON);
+                    moderationBadge.hide();
+                }
+            });
+        }
+        
+        // 页面加载时立即获取数量
+        getModerationCount();
+        
+        // 可选：设置定时刷新，例如每分钟刷新一次
+        // setInterval(getModerationCount, 60 * 1000); 
+        {% endif %}
+    });
+</script>
 </body>
 
 </html>

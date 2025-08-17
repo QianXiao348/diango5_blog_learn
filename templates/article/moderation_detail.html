@@ -1,0 +1,124 @@
+{# templates/blog/moderation_detail.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}审核详情 - #{{ log.id }}{% endblock %}
+
+{% block head %}
+    <style>
+        /* 确保图片不会超出其容器的宽度 */
+        .moderation-content img,
+        .moderation-content .w-e-text-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .form-error-message {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <h2>审核详情 - #{{ log.id }}</h2>
+                <div class="card p-4 shadow-sm">
+                    <h4 class="mb-3">待审核内容</h4>
+                    <small class="text-muted">发布作者: {{ log.author.username }} • {{ log.created_at|date:"Y-m-d H:i" }}</small>
+                    <hr>
+
+                    <div class="moderation-content">
+                    {% if log.content_type == 'blog' %}
+                        <h5 class="fw-bold">标题:</h5>
+                        <p class="lead">{{ processed_content.title }}</p>
+
+                        <h5 class="fw-bold mt-3">内容:</h5>
+                        <div class="mt-3">{{ processed_content.content | safe }}</div>
+                        <small class="text-muted mt-3 d-block">分类: {{ log.category.name }}</small>
+
+                    {% elif log.content_type == 'comment' %}
+                        <h5 class="fw-bold">评论内容：</h5>
+                        <p class="mt-3">{{ processed_content.content | linebreaksbr }}</p>
+                        <small class="text-muted mt-3 d-block">所属博客ID: {{ processed_content.blog_id }}</small>
+                        {% if processed_content.parent_comment_id %}
+                            <small class="text-muted d-block">回复评论ID: {{ processed_content.parent_comment_id }}</small>
+                        {% endif %}
+                    {% endif %}
+                    </div>
+                    
+                    <hr>
+                    <div class="text-danger">
+                        <strong>AI标记原因:</strong>
+                        <p>{{ log.reason }}</p>
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-success me-2 review-action-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
+                        <button type="button" class="btn btn-danger review-action-btn" data-log-id="{{ log.id }}" data-action="reject">拒绝</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        // CSRF Token 获取函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        $('.review-action-btn').on('click', function() {
+            const btn = $(this);
+            const logId = btn.data('log-id');
+            const action = btn.data('action');
+
+            if (!confirm(`确定要 ${action === 'approve' ? '通过' : '拒绝'} 这条内容吗？`)) {
+                return;
+            }
+
+            $.ajax({
+                url: `/moderation/action/${logId}/${action}/`,
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                success: function(response) {
+                    alert(response.msg);
+                    if (response.code === 200) {
+                        // 审核成功后，跳转回审核队列页面
+                        window.location.href = "{% url 'blog:moderation_queue' %}";
+                    }
+                },
+                error: function(jqXHR) {
+                    let errorMsg = '操作失败！';
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                        errorMsg = jqXHR.responseJSON.message;
+                    } else if (jqXHR.status === 404) {
+                        errorMsg = '请求地址错误！';
+                    } else if (jqXHR.status === 500) {
+                        errorMsg = '服务器内部错误！';
+                    }
+                    alert(errorMsg);
+                    console.error('AJAX Error:', jqXHR);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

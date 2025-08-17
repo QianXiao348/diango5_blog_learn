@@ -179,7 +179,7 @@ def edit_blog(request, blog_id):
                         flagged_by_ai=True,
                         reason=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
                         status='pending',
-                        author=request.user,
+                        author=blog.author,
                         category=category,
                     )
                     return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核！'})
@@ -592,18 +592,35 @@ def review_action(request, log_id, action):
 
         target_url = ""
         if log.content_type == 'blog':
-            lines = log.original_content.split('\n', 1)
-            title = lines[0].replace('标题: ', '').strip()
-            content = lines[1].replace('内容: ', '').strip()
-            new_blog = Blog.objects.create(
-                author=log.author,
-                category=log.category,
-                title=title,
-                content=content,
-                pub_time=timezone.now()
-            )
-            log.content_id = new_blog.id
-            target_url = reverse('blog:blog_detail', args=[new_blog.id])
+            if log.content_id:
+                # 已有博客的审核
+                existing_blog = get_object_or_404(Blog, id=log.content_id)
+
+                lines = log.original_content.split('\n', 1)
+                title = lines[0].replace('标题: ', '').strip()
+                content = lines[1].replace('内容: ', '').strip()
+
+                existing_blog.title = title
+                existing_blog.content = content
+                existing_blog.category = log.category
+                existing_blog.pub_time = timezone.now()
+                existing_blog.save()
+                verb = "博客文章"
+                target_url = reverse('blog:blog_detail', args=[existing_blog.id])
+            else:
+                lines = log.original_content.split('\n', 1)
+                title = lines[0].replace('标题: ', '').strip()
+                content = lines[1].replace('内容: ', '').strip()
+                new_blog = Blog.objects.create(
+                    author=log.author,
+                    category=log.category,
+                    title=title,
+                    content=content,
+                    pub_time=timezone.now()
+                )
+                log.content_id = new_blog.id
+                log.save()
+                target_url = reverse('blog:blog_detail', args=[new_blog.id])
         elif log.content_type == 'comment':
             verb = "评论内容"
             comment_data = json.loads(log.original_content)
@@ -642,9 +659,11 @@ def review_action(request, log_id, action):
         )
         return JsonResponse({'code': 200, 'msg': '内容已通过审核并发布！'})
     elif action == 'reject':
+        custom_reason = request.POST.get('reason', log.reason)
         log.status = 'rejected'
         log.reviewed_at = timezone.now()
         log.moderator = request.user
+        log.reason = f"人工复核拒绝，原因：{custom_reason}"
         log.save()
 
         target_url = ""
@@ -663,7 +682,56 @@ def review_action(request, log_id, action):
             actor=log.moderator,
             recipient=log.author,
             verb=verb,
-            description=f'你的内容被拒绝了。',
+            description=f'你的内容被拒绝了，原因是：{custom_reason}',
             target_url=target_url
         )
         return JsonResponse({'code': 200, 'msg': '内容已拒绝！'})
+
+
+@require_GET
+@user_passes_test(is_moderator)
+def get_moderation_count(request):
+    """
+    获取待审核内容的数量
+    """
+    try:
+        count = ModerationLog.objects.filter(status='pending').count()
+        return JsonResponse({'code': 200, 'msg': '获取成功！', 'data': {'count': count}})
+    except Exception as e:
+        return JsonResponse({'code': 500, 'msg': '服务器错误！'})
+
+
+@user_passes_test(is_moderator, login_url=reverse_lazy('qxauth:login'))
+@require_GET
+def moderation_detail(request, log_id):
+    """
+    审核详情页
+    """
+    log = get_object_or_404(ModerationLog, id=log_id, status='pending')
+
+    processed_content = {}
+    if log.content_type == 'blog':
+        try:
+            lines = log.original_content.split('\n', 1)
+            title = lines[0].replace('标题: ', '').strip()
+            content = lines[1].replace('内容: ', '').strip()
+            processed_content = {
+                'title': title,
+                'content': content,
+            }
+        except IndexError:
+            # 如果解析失败，提供一个默认值
+            processed_content = {'title': '无法解析的标题', 'content': log.original_content}
+    elif log.content_type == 'comment':
+        try:
+            comment_data = json.loads(log.original_content)
+            processed_content = comment_data
+        except json.JSONDecodeError:
+            # 如果解析失败，提供一个默认值
+            processed_content = {'content': '无法解析的评论内容'}
+
+    context = {
+        'log': log,
+        'processed_content': processed_content,  # 将预处理好的内容传递给模板
+    }
+    return render(request, 'article/moderation_detail.html', context)

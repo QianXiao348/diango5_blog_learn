@@ -43,4 +43,8 @@ urlpatterns = [
     path('moderation/queue/', views.moderation_queue, name='moderation_queue'),
     # 审核操作
     path('moderation/action/<int:log_id>/<str:action>/', views.review_action, name='review_action'),
+    # 待审核数
+    path('moderation/count/', views.get_moderation_count, name='get_moderation_count'),
+    # 审核详情
+    path('moderation/detail/<int:log_id>/', views.moderation_detail, name='moderation_detail'),
 ]
