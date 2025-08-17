@@ -54,12 +54,18 @@
                     <hr>
                     <div class="text-danger">
                         <strong>AI标记原因:</strong>
-                        <p>{{ log.reason }}</p>
+                        <p id="ai-reason-text">{{ log.reason }}</p>
+                    </div>
+                
+                    <div class="mt-3">
+                        <label for="review-reason-textarea" class="form-label fw-bold">人工复核原因（选填）：</label>
+                        <textarea class="form-control" id="review-reason-textarea" rows="3" placeholder="填写自定义拒绝原因，不填则使用AI原因"></textarea>
                     </div>
 
                     <div class="mt-4 text-end">
                         <button type="button" class="btn btn-success me-2 review-action-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
-                        <button type="button" class="btn btn-danger review-action-btn" data-log-id="{{ log.id }}" data-action="reject">拒绝</button>
+                        {# 修正：移除 review-action-btn 类，并添加一个独立的“拒绝”按钮 #}
+                        <button type="button" class="btn btn-danger" id="reject-btn" data-log-id="{{ log.id }}">拒绝</button>
                     </div>
                 </div>
             </div>
@@ -85,24 +91,54 @@
             return cookieValue;
         }
 
+        // 审核操作按钮的点击事件 (包括“通过”)
         $('.review-action-btn').on('click', function() {
             const btn = $(this);
             const logId = btn.data('log-id');
             const action = btn.data('action');
 
-            if (!confirm(`确定要 ${action === 'approve' ? '通过' : '拒绝'} 这条内容吗？`)) {
+            if (!confirm('确定要通过这条内容吗？')) {
                 return;
+            }
+            // 直接执行通过操作，不带原因
+            performReviewAction(logId, action, '');
+        });
+
+        // “拒绝”按钮的点击事件
+        $('#reject-btn').on('click', function() {
+            const btn = $(this);
+            const logId = btn.data('log-id');
+            const customReason = $('#review-reason-textarea').val().trim();
+            
+            // 修正：如果管理员没有填写原因，就使用 AI 标记的原始原因
+            const reasonToSend = customReason || $('#ai-reason-text').text().trim();
+
+            if (!confirm(`确定要拒绝这条内容吗？\n原因：${reasonToSend}`)) {
+                return;
+            }
+
+            // 执行拒绝操作，带上原因
+            performReviewAction(logId, 'reject', reasonToSend);
+        });
+        
+        // 执行 AJAX 请求的通用函数
+        function performReviewAction(logId, action, reason) {
+            const postData = { 'action': action, 'csrfmiddlewaretoken': getCookie('csrftoken') };
+            
+            // 只有当原因存在时才发送 reason 参数
+            if (reason) {
+                postData.reason = reason;
             }
 
             $.ajax({
                 url: `/moderation/action/${logId}/${action}/`,
                 method: 'POST',
+                data: postData,
                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
                 success: function(response) {
                     alert(response.msg);
                     if (response.code === 200) {
-                        // 审核成功后，跳转回审核队列页面
-                        window.location.href = "{% url 'blog:moderation_queue' %}";
+                        window.location.href = "{% url 'blog:moderation_queue' %}"; // 审核成功后返回队列
                     }
                 },
                 error: function(jqXHR) {
@@ -118,7 +154,7 @@
                     console.error('AJAX Error:', jqXHR);
                 }
             });
-        });
+        }
     });
 </script>
 {% endblock %}
