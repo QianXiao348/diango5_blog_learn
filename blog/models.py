@@ -141,7 +141,7 @@ class ModerationLog(models.Model):
     original_content = models.TextField(verbose_name='原始内容')
     flagged_by_ai = models.BooleanField(default=False, verbose_name='是否由AI标记')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, verbose_name='审核状态')
-    reazon = models.TextField(blank=True, verbose_name='标记原因')
+    reason = models.TextField(blank=True, verbose_name='标记原因')
     category = models.ForeignKey(
         BlogCategory,
         on_delete=models.SET_NULL,

@@ -162,8 +162,37 @@ def edit_blog(request, blog_id):
     else:
         form = PubBlogForm(request.POST, instance=blog)  # instance 绑定数据
         if form.is_valid():
-            blog = form.save()
-            return JsonResponse({'code': 200, 'msg': '博客更新成功！', 'data': {'blog_id': blog.id}})
+            title = form.cleaned_data.get('title')
+            content = form.cleaned_data.get('content')
+            category = form.cleaned_data.get('category')
+
+            # 内容审核
+            is_title_safe, title_moderation_msg = moderate_content(title)
+            is_content_safe, content_moderation_msg = moderate_content(content)
+
+            if not is_title_safe or not is_content_safe:
+                try:
+                    ModerationLog.objects.create(
+                        content_type='blog',
+                        content_id=blog.id,
+                        original_content=f'标题: {title}\n内容: {content}',
+                        flagged_by_ai=True,
+                        reason=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
+                        status='pending',
+                        author=request.user,
+                        category=category,
+                    )
+                    return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核！'})
+                except Exception as e:
+                    # 如果 ModerationLog 创建失败，返回 500 错误
+                    print(f"Error creating ModerationLog for edited blog: {e}")
+                    return JsonResponse({'code': 500, 'msg': f'服务器内部错误：审核日志创建失败'}, status=500)
+            try:
+                blog = form.save()
+                return JsonResponse({'code': 200, 'msg': '博客更新成功！', 'data': {'blog_id': blog.id}})
+            except Exception as e:
+                print(f"Error saving edited blog: {e}")
+                return JsonResponse({'code': 500, 'msg': '服务器内部错误：博客保存失败'}, status=500)
         else:
             print(form.errors)
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
@@ -196,7 +225,7 @@ def pub_blog(request):
                     content_id=None,
                     original_content=f'标题: {title}\n内容: {content}',
                     flagged_by_ai=True,
-                    reazon=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
+                    reason=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
                     status='pending',
                     author=request.user,
                     category=form.cleaned_data.get('category'),
@@ -255,7 +284,7 @@ def pub_comment(request, blog_id, parent_comment_id=None):
             content_id=None,
             original_content=json.dumps(comment_content, ensure_ascii=False),  # 将字典转换为 JSON 字符串
             flagged_by_ai=True,
-            reazon=moderation_msg,
+            reason=moderation_msg,
             status='pending',
             author=request.user
         )

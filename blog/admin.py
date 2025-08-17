@@ -20,7 +20,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 class ModerationLogAdmin(admin.ModelAdmin):
-    list_display = ['author', 'content_type', 'content_id', 'original_content', 'reazon', 'status', 'created_at']
+    list_display = ['author', 'content_type', 'content_id', 'original_content', 'reason', 'status', 'created_at']
 
 
 admin.site.register(BlogCategory, BlogCategoryAdmin)
