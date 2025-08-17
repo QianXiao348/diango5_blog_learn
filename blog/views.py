@@ -585,12 +585,14 @@ def review_action(request, log_id, action):
                 parent_comment = BlogComment.objects.get(id=comment_data['parent_comment_id'])
 
             reply_to_user = None
-            if comment_data.get('reply_to_user'):
+            if comment_data.get('reply_to_user_id'):
                 reply_to_user = User.objects.get(id=comment_data['reply_to_user_id'])
+
+            blog_instance = get_object_or_404(Blog, id=comment_data['blog_id'])
 
             new_comment = BlogComment.objects.create(
                 content=comment_data['content'],
-                blog=comment_data['blog_id'],
+                blog= blog_instance,
                 author=log.author,
                 parent=parent_comment,
                 reply_to=reply_to_user
@@ -621,7 +623,12 @@ def review_action(request, log_id, action):
             target_url = reverse('blog:blog_detail', args=[log.content_id]) if log.content_id else reverse('blog:index')
         elif log.content_type == 'comment':
             verb = "评论内容"
-            target_url = reverse('blog:blog_detail', args=[log.blog_id]) if log.blog_id else reverse('blog:index')
+            comment_data = json.loads(log.original_content)
+            blog_id = comment_data.get('blog_id')
+            if blog_id:
+                target_url = reverse('blog:blog_detail', args=[blog_id])
+            else:
+                target_url = reverse('blog:index')
         # 创建审核拒绝通知
         Notification.objects.create(
             actor=log.moderator,
