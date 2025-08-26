@@ -80,9 +80,11 @@ def register(request):
             # 重新跳转到注册页面
             # return redirect(reverse('qxauth:register'))
             # return render(request, 'register.html', context={'form':form})
-              
-# 发送邮件验证码
+
 def send_email_captcha(request):
+    """
+    发送邮件验证码
+    """
     email = request.GET.get('email')
     if not email:
         return JsonResponse({"code":400, "message":'必须传递邮件！'})

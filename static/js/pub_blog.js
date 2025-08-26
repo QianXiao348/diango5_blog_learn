@@ -1,6 +1,7 @@
 // static/js/pub_blog.js
+
 $(document).ready(function() {
-    // CSRF Token 获取函数 (保持不变)
+    // CSRF Token 获取函数
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -16,7 +17,7 @@ $(document).ready(function() {
         return cookieValue;
     }
 
-    const {createEditor, createToolbar} = window.wangEditor
+    const {createEditor, createToolbar} = window.wangEditor;
     const uploadImageUrl = "{% url 'blog:get_image_for_blog' %}";
 
     // WangEditor 配置
@@ -42,7 +43,7 @@ $(document).ready(function() {
         html: '<p><br></p>',
         config: editorConfig,
         mode: 'default',
-    })
+    });
 
     const toolbarConfig = {};
     const toolbar = createToolbar({
@@ -59,6 +60,10 @@ $(document).ready(function() {
     const categorySelect = $('#category-select');
     const contentTextarea = $('#editor-content-textarea');
     const publishMessageDiv = $('#publish-message');
+    // ===============================================
+    // 修正：从按钮的 data-redirect-url 属性中获取 URL 模板
+    // ===============================================
+    const blogDetailUrlTemplate = submitBtn.data('redirect-url');
 
     // 监听发布按钮的点击事件
     submitBtn.on('click', function(event) {
@@ -72,7 +77,6 @@ $(document).ready(function() {
         const categoryId = categorySelect.val();
         const content = contentTextarea.val();
         const csrfToken = getCookie('csrftoken');
-        const blogDetailUrlTemplate = "{% url 'blog:blog_detail' blog_id=0 %}";
 
         // 简单前端验证
         if (!title.trim()) {
@@ -91,28 +95,24 @@ $(document).ready(function() {
             'csrfmiddlewaretoken': csrfToken
         };
 
-        // 发送 AJAX 请求到 Django 后端，并使用 success/error 回调处理
+        // 发送 AJAX 请求到 Django 后端
         $.ajax({
             url: pubBlogForm.attr('action'),
             method: 'POST',
             data: postData,
             success: function(response, textStatus, jqXHR) {
-                // success 回调只在 HTTP 状态码为 200-299 时执行
-                // 你的后端返回 200 和 202，所以这里都会被捕获
-                if (jqXHR.status === 200) {
+                if (response.code === 200) {
                     alert('发布成功！');
                     const newBlogId = response.data.blog_id;
-                    const redirectUrl = blogDetailUrlTemplate.replace('0', newBlogId);
+                    const redirectUrl = blogDetailUrlTemplate.replace("0", newBlogId);
                     window.location.href = redirectUrl;
-                } else if (jqXHR.status === 202) {
-                    // 后端返回的msg字段用于审核提示
+                } else if (response.code === 202) {
                     const warningAlert = `<div class="alert alert-warning" role="alert">${response.msg}</div>`;
                     publishMessageDiv.html(warningAlert);
                     alert(response.msg);
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                // error 回调处理所有非 2xx 状态码
                 const status = jqXHR.status;
                 const response = jqXHR.responseJSON || { msg: '未知错误' };
 
@@ -127,7 +127,7 @@ $(document).ready(function() {
                     alert('服务器内部错误，请稍后再试。');
                     console.error('AJAX Error:', jqXHR);
                 } else {
-                    alert('网络错误或服务器异常：' + response.msg);
+                    alert('网络错误或服务器异常：' + (response?.msg || '未知错误'));
                     console.error('AJAX 错误:', jqXHR.status, textStatus, errorThrown);
                 }
             }

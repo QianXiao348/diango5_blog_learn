@@ -35,7 +35,7 @@
                 {% csrf_token %}
             <div class="mb-3">
                 <label class="form-label">标题</label>
-                <input type="text" name="title" class="form-control">
+                <input type="text" name="title" id="id-title" class="form-control">
             </div>
             <div class="mb-3">
                 <label class="form-label">分类</label>
@@ -58,4 +58,5 @@
             </div>
         </form>
     </div>
+    <script src="{% static 'js/pub_blog.js' %}"></script>
 {% endblock %}

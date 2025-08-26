@@ -145,6 +145,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
      BASE_DIR / "static"
  ]
+SENSITIVE_WORDS_FILE = BASE_DIR / 'static/text/Sensitive_words_lower.txt'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
