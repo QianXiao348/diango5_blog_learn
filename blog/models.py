@@ -165,4 +165,4 @@ class ModerationLog(models.Model):
     class Meta:
         verbose_name = '内容审核日志'
         verbose_name_plural = verbose_name
-        ordering = ['created_at']
+        ordering = ['-created_at']

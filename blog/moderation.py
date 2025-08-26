@@ -4,9 +4,9 @@ import os
 import re
 from django.conf import settings
 
-# 检查 settings.py 中是否定义了敏感词文件路径
+
 SENSITIVE_WORDS_FILE_PATH = getattr(settings, 'SENSITIVE_WORDS_FILE', None)
-SENSITIVE_WORDS = set()
+SENSITIVE_WORDS = set()  # 敏感词词典
 
 
 def load_sensitive_words():
@@ -31,12 +31,36 @@ def load_sensitive_words():
         SENSITIVE_WORDS.clear()
 
 
+#  构建词典字典树
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+
+
+def build_trie(sensitive_words):
+    """
+    根据敏感词列表构建字典树
+    """
+    root = TrieNode()
+    for word in sensitive_words:
+        node = root
+        for char in word:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end = True
+    return root
+
+
 load_sensitive_words()  # 应用启动时加载敏感词
+TRIE_ROOT = build_trie(SENSITIVE_WORDS)  # 构建字典树
 # 初级审查：正则表达式规则
 REGEX_RULES = [
     (re.compile(r'(.)\1{5,}'), "包含了过多的重复字符。"),
     (re.compile(r'http[s]?://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(?:\S*)'), "包含了外部链接。"),
 ]
+
 
 def moderate_content(text: str) -> Tuple[bool, str]:
     """
@@ -72,10 +96,18 @@ def primary_moderation(text: str) -> Tuple[bool, str]:
     初级审查，基于敏感词和正则表达式进行匹配。
     """
     text_lower = text.lower()
-    for word in SENSITIVE_WORDS:
-        if word in text_lower:
-            print(f"contains sensitive word: {word}")
-            return False, f"文字含有敏感词：{word}"
+    # 遍历文本，从每个字符开始尝试匹配敏感词
+    for i in range(len(text_lower)):
+        node = TRIE_ROOT
+        j = i
+        while j < len(text_lower) and text_lower[j] in node.children:
+            node = node.children[text_lower[j]]
+            if node.is_end:
+                # 找到敏感词，返回匹配的词语
+                matched_word = text_lower[i:j + 1]
+                print(f"contains sensitive word: {matched_word}")
+                return False, f"文字含有敏感词：{matched_word}"
+            j += 1
 
     for regex, message in REGEX_RULES:
         if regex.search(text):
