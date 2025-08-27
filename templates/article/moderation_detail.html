@@ -29,7 +29,14 @@
                 <h2>审核详情 - #{{ log.id }}</h2>
                 <div class="card p-4 shadow-sm">
                     <h4 class="mb-3">待审核内容</h4>
-                    <small class="text-muted">发布作者: {{ log.author.username }} • {{ log.created_at|date:"Y-m-d H:i" }}</small>
+                    <small class="text-muted">
+                        {% if not log.flagged_by_ai%}
+                            来源: **用户举报** | 举报者: {{ log.reporter.username }}
+                        {% else %}
+                            来源: AI标记
+                        {% endif %}
+                        | 发布作者: {{ log.author.username }} • {{ log.created_at|date:"Y-m-d H:i" }}
+                    </small>
                     <hr>
 
                     <div class="moderation-content">
@@ -40,7 +47,6 @@
                         <h5 class="fw-bold mt-3">内容:</h5>
                         <div class="mt-3">{{ processed_content.content | safe }}</div>
                         <small class="text-muted mt-3 d-block">分类: {{ log.category.name }}</small>
-
                     {% elif log.content_type == 'comment' %}
                         <h5 class="fw-bold">评论内容：</h5>
                         <p class="mt-3">{{ processed_content.content | linebreaksbr }}</p>
@@ -53,18 +59,21 @@
                     
                     <hr>
                     <div class="text-danger">
-                        <strong>AI标记原因:</strong>
+                        {% if not log.flagged_by_ai%}
+                            <strong>举报原因:</strong>
+                        {% else %}
+                            <strong>AI标记原因:</strong>
+                        {% endif %}
                         <p id="ai-reason-text">{{ log.reason }}</p>
                     </div>
                 
                     <div class="mt-3">
                         <label for="review-reason-textarea" class="form-label fw-bold">人工复核原因（选填）：</label>
-                        <textarea class="form-control" id="review-reason-textarea" rows="3" placeholder="填写自定义拒绝原因，不填则使用AI原因"></textarea>
+                        <textarea class="form-control" id="review-reason-textarea" rows="3" placeholder="填写自定义拒绝原因，不填则使用默认理由"></textarea>
                     </div>
 
                     <div class="mt-4 text-end">
                         <button type="button" class="btn btn-success me-2 review-action-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
-                        {# 修正：移除 review-action-btn 类，并添加一个独立的“拒绝”按钮 #}
                         <button type="button" class="btn btn-danger" id="reject-btn" data-log-id="{{ log.id }}">拒绝</button>
                     </div>
                 </div>
@@ -110,7 +119,8 @@
             const logId = btn.data('log-id');
             const customReason = $('#review-reason-textarea').val().trim();
             
-            // 修正：如果管理员没有填写原因，就使用 AI 标记的原始原因
+            // 如果管理员没有填写自定义原因，则使用默认理由
+            // 无论是AI标记还是举报，默认理由都存储在 log.reason 中
             const reasonToSend = customReason || $('#ai-reason-text').text().trim();
 
             if (!confirm(`确定要拒绝这条内容吗？\n原因：${reasonToSend}`)) {
@@ -123,7 +133,7 @@
         
         // 执行 AJAX 请求的通用函数
         function performReviewAction(logId, action, reason) {
-            const postData = { 'action': action, 'csrfmiddlewaretoken': getCookie('csrftoken') };
+            const postData = { 'csrfmiddlewaretoken': getCookie('csrftoken') };
             
             // 只有当原因存在时才发送 reason 参数
             if (reason) {

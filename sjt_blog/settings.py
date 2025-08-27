@@ -164,3 +164,14 @@ DEFAULT_FROM_EMAIL = '1768248496@qq.com'  # 默认发送邮件
 # 媒体文件地址
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
+# 测试用
+# 允许跨域请求携带认证信息
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://www.apifox.cn",
+    "http://localhost:8000",
+]
+# 确保 SESSION_COOKIE 可以被前端访问
+SESSION_COOKIE_HTTPONLY = False  # 仅用于测试环境
+CSRF_COOKIE_HTTPONLY = False

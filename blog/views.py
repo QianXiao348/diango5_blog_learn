@@ -186,13 +186,13 @@ def edit_blog(request, blog_id):
                 except Exception as e:
                     # 如果 ModerationLog 创建失败，返回 500 错误
                     print(f"Error creating ModerationLog for edited blog: {e}")
-                    return JsonResponse({'code': 500, 'msg': f'服务器内部错误：审核日志创建失败'}, status=500)
+                    return JsonResponse({'code': 500, 'msg': f'服务器内部错误：审核日志创建失败'})
             try:
                 blog = form.save()
                 return JsonResponse({'code': 200, 'msg': '博客更新成功！', 'data': {'blog_id': blog.id}})
             except Exception as e:
                 print(f"Error saving edited blog: {e}")
-                return JsonResponse({'code': 500, 'msg': '服务器内部错误：博客保存失败'}, status=500)
+                return JsonResponse({'code': 500, 'msg': '服务器内部错误：博客保存失败'})
         else:
             print(form.errors)
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
@@ -582,72 +582,85 @@ def review_action(request, log_id, action):
     """
     审核操作
     """
+    global content_obj
     log = get_object_or_404(ModerationLog, id=log_id, status='pending')
+    if log.content_type == 'blog':
+        content_obj = get_object_or_404(Blog, id=log.content_id) if log.content_id else None
     verb = "博客内容"
     if action == 'approve':
         log.status = 'approved'
         log.reviewed_at = timezone.now()
         log.moderator = request.user
         log.save()
-
         target_url = ""
-        if log.content_type == 'blog':
-            if log.content_id:
-                # 已有博客的审核
-                existing_blog = get_object_or_404(Blog, id=log.content_id)
 
-                lines = log.original_content.split('\n', 1)
-                title = lines[0].replace('标题: ', '').strip()
-                content = lines[1].replace('内容: ', '').strip()
-
-                existing_blog.title = title
-                existing_blog.content = content
-                existing_blog.category = log.category
-                existing_blog.pub_time = timezone.now()
-                existing_blog.save()
-                verb = "博客文章"
-                target_url = reverse('blog:blog_detail', args=[existing_blog.id])
-            else:
-                lines = log.original_content.split('\n', 1)
-                title = lines[0].replace('标题: ', '').strip()
-                content = lines[1].replace('内容: ', '').strip()
-                new_blog = Blog.objects.create(
-                    author=log.author,
-                    category=log.category,
-                    title=title,
-                    content=content,
-                    pub_time=timezone.now()
-                )
-                log.content_id = new_blog.id
-                log.save()
-                target_url = reverse('blog:blog_detail', args=[new_blog.id])
-        elif log.content_type == 'comment':
-            verb = "评论内容"
-            comment_data = json.loads(log.original_content)
-
-            # # 获取父评论和回复用户对象
-            parent_comment = None
-            if comment_data.get('parent_comment_id'):
-                parent_comment = BlogComment.objects.get(id=comment_data['parent_comment_id'])
-
-            reply_to_user = None
-            if comment_data.get('reply_to_user_id'):
-                reply_to_user = User.objects.get(id=comment_data['reply_to_user_id'])
-
-            blog_instance = get_object_or_404(Blog, id=comment_data['blog_id'])
-
-            new_comment = BlogComment.objects.create(
-                content=comment_data['content'],
-                blog= blog_instance,
-                author=log.author,
-                parent=parent_comment,
-                reply_to=reply_to_user
+        if not log.flagged_by_ai:
+            # 举报内容审核通过，通知举报人未发现违规
+            Notification.objects.create(
+                recipient=log.reporter,
+                actor=log.moderator,
+                verb='审核结果通知',
+                description='你举报的文章经审核未发现违规行为。',
+                target_url=reverse('blog:blog_detail', args=[content_obj.id])
             )
-            log.content_id = new_comment.id
-            log.save()
-            target_url = reverse('blog:blog_detail', args=[comment_data['blog_id']]) + f'#comment-{new_comment.id}'
         else:
-            return JsonResponse({'code': 400, 'msg': '未知内容类型！'})
+            if log.content_type == 'blog':
+                if log.content_id:
+                    # 已有博客的审核
+                    existing_blog = get_object_or_404(Blog, id=log.content_id)
+
+                    lines = log.original_content.split('\n', 1)
+                    title = lines[0].replace('标题: ', '').strip()
+                    content = lines[1].replace('内容: ', '').strip()
+
+                    existing_blog.title = title
+                    existing_blog.content = content
+                    existing_blog.category = log.category
+                    existing_blog.pub_time = timezone.now()
+                    existing_blog.save()
+                    verb = "博客文章"
+                    target_url = reverse('blog:blog_detail', args=[existing_blog.id])
+                else:
+                    lines = log.original_content.split('\n', 1)
+                    title = lines[0].replace('标题: ', '').strip()
+                    content = lines[1].replace('内容: ', '').strip()
+                    new_blog = Blog.objects.create(
+                        author=log.author,
+                        category=log.category,
+                        title=title,
+                        content=content,
+                        pub_time=timezone.now()
+                    )
+                    log.content_id = new_blog.id
+                    log.save()
+                    target_url = reverse('blog:blog_detail', args=[new_blog.id])
+            elif log.content_type == 'comment':
+                verb = "评论内容"
+                comment_data = json.loads(log.original_content)
+
+                # # 获取父评论和回复用户对象
+                parent_comment = None
+                if comment_data.get('parent_comment_id'):
+                    parent_comment = BlogComment.objects.get(id=comment_data['parent_comment_id'])
+
+                reply_to_user = None
+                if comment_data.get('reply_to_user_id'):
+                    reply_to_user = User.objects.get(id=comment_data['reply_to_user_id'])
+
+                blog_instance = get_object_or_404(Blog, id=comment_data['blog_id'])
+
+                new_comment = BlogComment.objects.create(
+                    content=comment_data['content'],
+                    blog= blog_instance,
+                    author=log.author,
+                    parent=parent_comment,
+                    reply_to=reply_to_user
+                )
+                log.content_id = new_comment.id
+                log.save()
+                target_url = reverse('blog:blog_detail', args=[comment_data['blog_id']]) + f'#comment-{new_comment.id}'
+            else:
+                return JsonResponse({'code': 400, 'msg': '未知内容类型！'})
 
         # 创建审核通过通知
         Notification.objects.create(
@@ -657,7 +670,7 @@ def review_action(request, log_id, action):
             description=f'你的内容已通过审核。',
             target_url=target_url
         )
-        return JsonResponse({'code': 200, 'msg': '内容已通过审核并发布！'})
+        return JsonResponse({'code': 200, 'msg': '内容已通过审核！'})
     elif action == 'reject':
         custom_reason = request.POST.get('reason', log.reason)
         log.status = 'rejected'
@@ -677,15 +690,30 @@ def review_action(request, log_id, action):
                 target_url = reverse('blog:blog_detail', args=[blog_id])
             else:
                 target_url = reverse('blog:index')
+
+        # 如果是举报内容，通知举报人举报成功并删除内容，通知作者违规
+        if not log.flagged_by_ai:
+            if content_obj:
+                content_obj.delete()
+
+            # 通知举报人举报成功
+            Notification.objects.create(
+                recipient=log.reporter,
+                actor=log.moderator,
+                verb='举报成功通知',
+                description=f'你举报的博客文章经审核确认为违规，已进行处理，感谢你的贡献！',
+                target_url=reverse('blog:index')
+            )
+
         # 创建审核拒绝通知
         Notification.objects.create(
             actor=log.moderator,
             recipient=log.author,
             verb=verb,
-            description=f'你的内容被拒绝了，原因是：{custom_reason}',
+            description=f'你的内容存在违规了，原因是：{custom_reason}',
             target_url=target_url
         )
-        return JsonResponse({'code': 200, 'msg': '内容已拒绝！'})
+        return JsonResponse({'code': 200, 'msg': '内容未通过审核！'})
 
 
 @require_GET
@@ -735,3 +763,34 @@ def moderation_detail(request, log_id):
         'processed_content': processed_content,  # 将预处理好的内容传递给模板
     }
     return render(request, 'article/moderation_detail.html', context)
+
+
+@csrf_exempt
+@require_POST
+@login_required(login_url=reverse_lazy('qxauth:login'))
+def report_post(request, blog_id):
+    """
+    处理用户提交的举报请求，并创建审核日志
+    """
+    try:
+        data = json.loads(request.body)
+        reason = data.get('reason', '无具体原因')
+        if not reason:
+            return JsonResponse({'code': 400, 'msg': '请填写举报理由！'})
+    except(json.JSONDecodeError, KeyError):
+        return JsonResponse({'code': 400, 'msg': '无效的请求数据！'})
+
+    blog = get_object_or_404(Blog, id=blog_id)
+
+    # 创建审核日志
+    ModerationLog.objects.create(
+        content_type='blog',
+        content_id=blog_id,
+        flagged_by_ai=False,
+        reporter=request.user,
+        reason=reason,
+        original_content=blog.title + '\n' + blog.content,
+        status='pending',
+        author=blog.author,
+    )
+    return JsonResponse({'code': 200, 'msg': '举报成功，我们会尽快处理！'})

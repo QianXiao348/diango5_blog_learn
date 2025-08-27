@@ -47,4 +47,6 @@ urlpatterns = [
     path('moderation/count/', views.get_moderation_count, name='get_moderation_count'),
     # 审核详情
     path('moderation/detail/<int:log_id>/', views.moderation_detail, name='moderation_detail'),
+    # 举报
+    path('blog/report/<int:blog_id>/', views.report_post, name='report_post'),
 ]

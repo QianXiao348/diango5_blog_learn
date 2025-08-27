@@ -22,6 +22,7 @@ from blog.models import Blog
 
 User = get_user_model()
 
+# @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def qxlogin(request):
     """ 用户登录 """
@@ -80,6 +81,7 @@ def register(request):
             # 重新跳转到注册页面
             # return redirect(reverse('qxauth:register'))
             # return render(request, 'register.html', context={'form':form})
+
 
 def send_email_captcha(request):
     """

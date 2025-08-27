@@ -117,7 +117,7 @@ class Notification(models.Model):
     class Meta:
         verbose_name = '通知'
         verbose_name_plural = verbose_name
-        ordering = ['created_at']
+        ordering = ['-created_at']
 
     def __str__(self):
         return f'{self.recipient.username} - {self.verb} - {self.content[:30]}'
@@ -125,7 +125,7 @@ class Notification(models.Model):
 
 class ModerationLog(models.Model):
     """
-    内容审核日志
+    内容审核日志及举报功能
     """
     CONTENT_TYPES = [
         ('blog', '博客文章'),
@@ -136,6 +136,14 @@ class ModerationLog(models.Model):
         ('approved', '已通过'),
         ('rejected', '已拒绝'),
     ]
+    reporter = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='举报者',
+        null=True,
+        blank=True,
+        related_name='reported_logs'
+    )
     content_type = models.CharField(max_length=20, choices=CONTENT_TYPES, verbose_name='内容类型')
     content_id = models.PositiveIntegerField(verbose_name='内容ID', null=True, blank=True)
     original_content = models.TextField(verbose_name='原始内容')
@@ -157,7 +165,8 @@ class ModerationLog(models.Model):
         on_delete=models.CASCADE,
         verbose_name='审核人员',
         null=True,
-        blank=True
+        blank=True,
+        related_name='moderated_logs'
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name='复核时间')
@@ -166,3 +175,7 @@ class ModerationLog(models.Model):
         verbose_name = '内容审核日志'
         verbose_name_plural = verbose_name
         ordering = ['-created_at']
+
+    def __str__(self):
+        source = '举报' if self.flagged_by_ai else 'AI审核'
+        return f'{source}记录 - 类型: {self.content_type}, ID: {self.id}'

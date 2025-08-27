@@ -8,8 +8,7 @@
 <link rel="stylesheet" href="{% static 'highlight/styles/default.min.css' %}">
 <script src="{% static 'highlight/highlight.min.js' %}"></script>
 {# 确保 Font Awesome 已经通过 base.html 引入。如果没引入，可以在这里再引入一次 #}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0MDxM+h/f/b/Kx0zBf9Q2+Xv8Xl5P9+7s+228/w/p+XyR/k6+D/S7x8w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
     /* 评论项的基础样式 - 保持不变 */
     .comment-item {
@@ -101,7 +100,12 @@
 {% endblock %}
 
 {% block main %}
-<h2>{{ blog.title }}</h2>
+    <h2>{{ blog.title }}</h2>
+    {% if request.user.is_authenticated and request.user != blog.author %}
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#reportModal">
+            <i class="fas fa-flag"></i> 举报
+        </button>
+    {% endif %}
 <hr>
 <div class="mt-2">
 <a href="{% url 'qxauth:user_profile' user_id=blog.author.id %}">
@@ -235,132 +239,134 @@
     </ul>
 </nav>
 
-
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportModalLabel">举报博客</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reportForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="reportReason" class="form-label">举报原因</label>
+                            <textarea class="form-control" id="reportReason" rows="3" required></textarea>
+                            <div id="reportMessage" class="mt-2 text-danger" style="display: none;"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="submitReport">提交</button>
+                </div>
+            </div>
+        </div>
+    </div>    
+    
 <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
 <script>
+    // CSRF Token 获取函数 (放在全局作用域)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     $(document).ready(function() {
-        hljs.highlightAll(); // 代码高亮，确保在DOM加载完成后调用
+        hljs.highlightAll(); // 代码高亮
 
         const blogId = {{ blog.id }};
         const commentForm = $("#comment-form");
-        const submitCommentBtn = $("#submit-comment-btn"); // 获取提交评论按钮
+        const submitCommentBtn = $("#submit-comment-btn");
         const commentContentInput = $("#id_content");
         const parentCommentIdInput = $("#parent-comment-id");
         const replyToUserIdInput = $("#reply-to-user-id");
         const commentErrorMessage = $("#comment-error-message");
-
-        // ===============================================
-        // 点赞功能相关的JS (保持不变)
-        // ===============================================
         const toggleLikeBtn = $('#toggle-like-btn');
         const likeCountDisplay = $('#like-count-display');
+        
+        // 举报功能相关的元素
+        const reportModalEl = document.getElementById('reportModal');
+        const reportModal = reportModalEl ? new bootstrap.Modal(reportModalEl) : null;
+        const submitReportBtn = document.getElementById('submitReport');
+        const reportReasonTextarea = document.getElementById('reportReason');
+        const reportMessageDiv = document.getElementById('reportMessage');
 
-        // CSRF Token 获取函数 (确保其在全局或可访问范围内)
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        if (toggleLikeBtn.length) { // 确保点赞按钮存在（用户已登录）
+        // ===============================================
+        // 点赞功能相关的JS
+        // ===============================================
+        if (toggleLikeBtn.length) {
             toggleLikeBtn.on('click', function() {
                 $.ajax({
                     url: `{% url 'blog:toggle_like' blog_id=blog.id %}`,
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
                     success: function(response) {
                         if (response.code === 200) {
-                            // 更新点赞按钮样式和文本
-                            if (response.is_liked) { // is_liked 字段由后端返回
+                            if (response.is_liked) {
                                 toggleLikeBtn.removeClass('btn-outline-primary').addClass('btn-primary');
                                 toggleLikeBtn.html('<i class="fas fa-heart"></i> 已点赞');
                             } else {
                                 toggleLikeBtn.removeClass('btn-primary').addClass('btn-outline-primary');
                                 toggleLikeBtn.html('<i class="far fa-heart"></i> 点赞');
                             }
-                            // 更新点赞数量显示
                             likeCountDisplay.text(response.like_count);
                         } else {
-                            alert(response.msg); // 显示错误信息
+                            alert(response.msg);
                             console.error("点赞操作失败:", response.msg);
                         }
                     },
-                    error: function(jqXHR, textStatus, errorThrown) {
+                    error: function(jqXHR) {
                         let errorMsg = "网络或服务器错误，点赞失败。";
                         if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
                             errorMsg = jqXHR.responseJSON.msg;
-                        } else if (jqXHR.responseText) {
-                            errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "...";
                         }
                         alert(errorMsg);
-                        console.error("点赞 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                        console.error("点赞 AJAX 错误:", jqXHR.status, jqXHR.responseText);
                     }
                 });
             });
         }
-        // ===============================================
-
 
         // ===============================================
-        // 处理回复按钮点击事件，滚动到主评论表单
+        // 回复功能相关的JS
         // ===============================================
         $(document).on('click', '.reply-button', function() {
-            // 首先判断用户是否已登录，未登录则提示并阻止后续操作
             {% if not request.user.is_authenticated %}
                 alert('请先登录才能回复！');
                 window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
-                return; // 阻止后续JS执行
+                return;
             {% endif %}
-
             const parentId = $(this).data('comment-id');
             const authorName = $(this).data('author-name');
             const authorId = $(this).data('author-id');
-
-            // 设置主评论表单的隐藏字段
             parentCommentIdInput.val(parentId);
             replyToUserIdInput.val(authorId);
-            // 存储 authorName，用于后续清除状态的判断
             replyToUserIdInput.data('author-name', authorName);
-
-            // 清空评论输入框（如果需要），然后填充回复文本
-            commentContentInput.val(''); // 确保清空旧内容
-            commentContentInput.val(`回复 @${authorName} : `).focus(); // 填充并聚焦
-
-            // 滚动到主评论表单
-            // 瞬间滚动
+            commentContentInput.val('').val(`回复 @${authorName} : `).focus();
             $('html, body').scrollTop(commentForm.offset().top - 80);
-
-            // 确保隐藏所有其他回复表单（如果它们是通过 _comment.html 渲染出来的）
-            // 如果你已经从 _comment.html 中移除了这些内联表单，这一行可以移除
             $('.reply-form').hide();
         });
 
-        // ===============================================
-        // 清除回复状态的逻辑
-        // ===============================================
         commentContentInput.on('input', function() {
             const currentVal = $(this).val();
             const prefixAuthorName = replyToUserIdInput.data('author-name');
             const prefix = prefixAuthorName ? `回复 @${prefixAuthorName} : ` : '';
-
             if (currentVal === '' || (prefix && !currentVal.startsWith(prefix))) {
-                 // 如果完全清空，或者不再是回复模式，则清除
                 parentCommentIdInput.val('');
                 replyToUserIdInput.val('');
-                replyToUserIdInput.removeData('author-name'); // 清除存储的作者名
+                replyToUserIdInput.removeData('author-name');
             } else if (parentCommentIdInput.val() && !currentVal.startsWith(prefix)) {
-                // 如果是回复状态，但文本内容不再以精确前缀开头（用户可能删改了）
                 parentCommentIdInput.val('');
                 replyToUserIdInput.val('');
                 replyToUserIdInput.removeData('author-name');
@@ -368,56 +374,43 @@
         });
 
         $(document).on('click', function(e) {
-            // 检查点击的不是评论表单内部，也不是回复按钮本身
             if (!$(e.target).closest('#comment-form').length && !$(e.target).closest('.reply-button').length) {
-                // 如果当前评论框内容是回复形式，且用户点击了外部，清空回复状态
                 if (commentContentInput.val().startsWith('回复 @')) {
-                    commentContentInput.val(''); // 清空回复内容
+                    commentContentInput.val('');
                 }
                 parentCommentIdInput.val('');
                 replyToUserIdInput.val('');
                 replyToUserIdInput.removeData('author-name');
             }
         });
-        // ===============================================
-
 
         // ===============================================
         // 提交评论按钮点击事件
         // ===============================================
-        // 这里的 submitCommentBtn 只有在用户登录时才存在，无需额外的 if (submitCommentBtn.length) 判断
-        // 因为如果未登录，HTML 渲染的是另一个按钮。
-        // 但为了代码健壮性，我们可以保留它，或者让 JavaScript 更简单。
-        if ($("#submit-comment-btn").length) { // 检查按钮是否存在
+        if ($("#submit-comment-btn").length) {
             $("#submit-comment-btn").on('click', function(event) {
                 event.preventDefault();
-
-                // 在这里再次检查用户登录状态，以防万一
                 {% if not request.user.is_authenticated %}
                     alert('请先登录才能发表评论！');
                     window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
-                    return; // 阻止后续 AJAX 提交
+                    return;
                 {% endif %}
-
                 const content = commentContentInput.val();
-                const parent_comment_id = parentCommentIdInput.val();
-                const reply_to_user_id = replyToUserIdInput.val();
-
                 if (!content.trim()) {
                     commentErrorMessage.text("评论内容不能为空！").show();
                     return;
                 } else {
                     commentErrorMessage.hide();
                 }
-
-                const csrfToken = getCookie('csrftoken'); // 使用 getCookie 获取 CSRF token
+                const csrfToken = getCookie('csrftoken');
+                const parent_comment_id = parentCommentIdInput.val();
+                const reply_to_user_id = replyToUserIdInput.val();
                 const postData = {
                     content: content,
                     blog_id: blogId,
                     parent_comment_id: parent_comment_id,
                     reply_to_user_id: reply_to_user_id
                 };
-
                 $.ajax({
                     url: commentForm.attr('action'),
                     method: 'POST',
@@ -428,7 +421,7 @@
                             commentContentInput.val('');
                             parentCommentIdInput.val('');
                             replyToUserIdInput.val('');
-                            replyToUserIdInput.removeData('author-name'); // 提交成功后清除
+                            replyToUserIdInput.removeData('author-name');
                             commentErrorMessage.hide();
                             window.location.reload();
                         } else {
@@ -436,29 +429,25 @@
                             console.error("评论失败:", response.msg);
                         }
                     },
-                    error: function(jqXHR, textStatus, errorThrown) {
+                    error: function(jqXHR) {
                         let errorMsg = "网络或服务器错误，请重试。";
-                        // 403 Forbidden 或其他认证失败
                         if (jqXHR.status === 403 || jqXHR.status === 401) {
                             alert('会话已过期或未登录，请重新登录！');
                             window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
                             return;
                         }
-
                         if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
                             errorMsg = jqXHR.responseJSON.msg;
-                        } else if (jqXHR.responseText) {
-                            errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "...";
                         }
                         commentErrorMessage.text(errorMsg).show();
-                        console.error("评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                        console.error("评论 AJAX 错误:", jqXHR.status, jqXHR.responseText);
                     }
                 });
             });
         }
 
         // ===============================================
-        // 删除评论按钮 (保持不变)
+        // 删除评论按钮
         // ===============================================
         $(document).on('click', '.delete-comment-btn', function() {
             if (!confirm("确定要删除这条评论吗？")) {
@@ -466,7 +455,6 @@
             }
             const commentId = $(this).data('comment-id');
             const csrfToken = getCookie('csrftoken');
-
             $.ajax({
                 url: `/blog/comment/delete/${commentId}/`,
                 method: 'POST',
@@ -479,25 +467,72 @@
                         console.error("删除失败:", response.msg);
                     }
                 },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    // 403 Forbidden 或其他认证失败
+                error: function(jqXHR) {
                     if (jqXHR.status === 403 || jqXHR.status === 401) {
                         alert('会话已过期或未登录，请重新登录！');
                         window.location.href = '{% url 'qxauth:login' %}?next={{ request.path }}';
                         return;
                     }
-
                     let errorMsg = "网络或服务器错误，请重试。";
                     if (jqXHR.responseJSON && jqXHR.responseJSON.msg) {
-                        errorMsg = jqXHR.responseJSON.msg; 
-                    } else if (jqXHR.responseText) {
-                        errorMsg = "服务器返回错误: " + jqXHR.responseText.substring(0, 100) + "..."; 
+                        errorMsg = jqXHR.responseJSON.msg;
                     }
                     commentErrorMessage.text(errorMsg).show();
-                    console.error("删除评论 AJAX 错误:", jqXHR.status, textStatus, errorThrown, jqXHR.responseText);
+                    console.error("删除评论 AJAX 错误:", jqXHR.status, jqXHR.responseText);
                 }
             });
         });
+
+        // ===============================================
+        // 新增的举报功能JS逻辑
+        // ===============================================
+        if (submitReportBtn) {
+            submitReportBtn.addEventListener('click', function() {
+                const reason = reportReasonTextarea.value.trim();
+                if (reason.length === 0) {
+                    reportMessageDiv.textContent = '举报理由不能为空。';
+                    reportMessageDiv.style.display = 'block';
+                    return;
+                }
+                reportMessageDiv.style.display = 'none';
+                
+                const csrfToken = getCookie('csrftoken');
+                const url = `{% url 'blog:report_post' blog_id=blog.id %}`;
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        alert(data.msg);
+                        reportModal.hide();
+                    } else if (data.code === 201) {
+                        alert(data.msg);
+                        reportModal.hide();
+                    }
+                    else {
+                        reportMessageDiv.textContent = data.msg;
+                        reportMessageDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    reportMessageDiv.textContent = '提交失败，请稍后重试。';
+                    reportMessageDiv.style.display = 'block';
+                });
+            });
+
+            reportModalEl.addEventListener('hidden.bs.modal', function() {
+                reportReasonTextarea.value = '';
+                reportMessageDiv.style.display = 'none';
+            });
+        }
     });
 </script>
 {% endblock %}
