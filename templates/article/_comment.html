@@ -1,0 +1,51 @@
+{# article/_comment.html #}
+
+{% load static %}
+
+<li class="list-group-item">
+    {# 核心修改：使用 comment.display_level 来控制缩进样式 #}
+    <div class="comment-item comment-level-{{ comment.level }}">
+        <div class="d-flex justify-content-between text-body-secondary mb-2">
+            <div class="user-info d-flex align-items-center">
+            <a href="{% url 'qxauth:user_profile' user_id=comment.author.id %}">
+                <img src="{% if comment.author.profile.avatar %}{{ comment.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}"
+                    class="rounded-circle" width="40" height="40" alt="{{ comment.author.username }}的头像">
+            </a>
+                <span class="ms-2 fw-bold">{{ comment.author.username }}</span>
+                {% comment %} 如果是回复，并且你想显示回复给谁 {% endcomment %}
+                {% if comment.parent and comment.parent.author %}
+                <span class="ms-1">回复</span>
+                <span class="ms-1 text-primary fw-bold">{{ comment.parent.author.username }}</span>
+                {% endif %}
+            </div>
+            <div class="create-time" style="font-size: 0.9em;">
+                {{ comment.pub_time|date:'Y-m-d H:i'}}
+            </div>
+        </div>
+
+        <div class="comment-content mb-2">{{ comment.content|linebreaksbr }}</div>
+
+        <div class="comment-actions">
+            {% if request.user.is_authenticated %}
+            {# 回复按钮：保持显示，允许回复任何层级的评论 #}
+            <button class="reply-button btn btn-sm btn-outline-info"
+                    data-comment-id="{{ comment.id }}"
+                    data-author-name="{{ comment.author.username }}"
+                    data-author-id="{{ comment.author.id }}">回复</button>
+            {% endif %}
+
+            {% if request.user == comment.author or request.user.is_superuser or request.user == comment.blog.author %}
+            <button class="delete-comment-btn btn btn-sm btn-outline-danger ms-2" data-comment-id="{{ comment.id }}">删除</button>
+            {% endif %}
+        </div>
+
+        {# 递归渲染子评论：保持显示，允许无限级递归 #}
+        {% if comment.children.all %}
+            <ul class="list-group list-group-flush mt-2">
+                {% for child_comment in comment.children.all %}
+                    {% include 'article/_comment.html' with comment=child_comment comment_form=comment_form %}
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</li>

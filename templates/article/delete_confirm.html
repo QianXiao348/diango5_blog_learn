@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}确认删除博客{% endblock %}
+{% block main %}
+    <h1>确认删除博客</h1>
+    <p>你确定要删除博客：<strong>"{{ blog.title }}"</strong> 吗？</p>
+    <p>删除后将无法恢复！</p>
+
+    <form method="post" action="{% url 'blog:delete_blog' blog.id %}">
+        {% csrf_token %} {# 重要的安全措施 #}
+        <button type="submit" style="background-color: red; color: white; padding: 10px 15px; border: none; cursor: pointer;">确认删除</button>
+        <a href="{% url 'blog:blog_detail' blog.id %}" style="margin-left: 10px;">取消</a>
+    </form>
+{% endblock %}

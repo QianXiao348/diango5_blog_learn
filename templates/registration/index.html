@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}博客首页{% endblock %}
+
+{% block head %}
+{# 确保 Font Awesome 已经通过 base.html 引入。如果没引入，可以在这里再引入一次 #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0MDxM+h/f/b/Kx0zBf9Q2+Xv8Xl5P9+7s+228/w/p+XyR/k6+D/S7x8w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+    /* 为统计信息添加一些样式，使其在同一行 */
+    .blog-stats-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* 统计项之间的间距 */
+    }
+    .blog-stats-footer .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 4px; /* 图标和文字间距 */
+        font-size: 0.85rem; /* 稍微小一点，适合卡片底部 */
+        color: #6c757d; /* 灰色，与 text-body-secondary 保持一致 */
+    }
+    .blog-stats-footer .fas,
+    .blog-stats-footer .far { /* 同时应用于实心和空心图标 */
+        color: inherit; /* 继承父元素的颜色，即 #6c757d 灰色 */
+    }
+    /* 确保作者信息和时间也能在同一行显示，并与统计信息良好对齐 */
+    .card-footer > div:first-child { /* 作者头像和用户名 */
+        flex-shrink: 0; /* 防止收缩 */
+        margin-right: auto; /* 将它推到最左边 */
+    }
+        .card-header a.text-dark { /* 博客标题链接 */
+        font-size: 1.15rem; /* 稍微减小标题字体，例如从默认 h5 的 1.25rem 减小到 1.15rem */
+        /* fw-bold 保持加粗 */
+    }
+
+    .card-body .card-text { /* 博客摘要内容 */
+        font-size: 0.9rem; /* 减小正文字体大小，通常 Bootstrap 默认是 1rem */
+        line-height: 1.5; /* 保持行高，确保可读性 */
+        color: #343a40; /* 默认深色，与 Bootstrap 保持一致 */
+    }
+
+    .card-footer { /* 底部信息（作者、时间） */
+        font-size: 0.8rem; /* 进一步减小底部信息字体，通常 Bootstrap 默认是 0.875rem */
+        color: #6c757d; /* 保持灰色 */
+    }
+</style>
+{% endblock %}
+
+
+{% block main %}
+    <h2>博客列表</h2>
+    <div class="row row-cols-1 row-cols-md-2 g-4"> {# 调整为 Bootstrap 5 的 g-4 来控制间距 #}
+        {% for blog in blogs %}
+            <div class="col">
+                <div class="card h-100"> {# 添加 h-100 让卡片高度一致 #}
+                    <div class="card-header">
+                        <a href="{% url 'blog:blog_detail' blog_id=blog.id %}" class="text-decoration-none text-dark fw-bold">{{ blog.title|striptags|truncatechars:40 }}</a>
+                    </div>
+                    <div class="card-body"> {# 移除 style="height: 120px;" 让内容自适应 #}
+                        <p class="card-text">{{ blog.content|striptags|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer text-body-secondary d-flex justify-content-between align-items-center"> {# 添加 align-items-center 垂直居中 #}
+                        {# 作者头像和用户名 #}
+                        <div>
+                            <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle me-2" width="30" height="30" alt="作者头像">{{ blog.author.username }}
+                        </div>
+
+                        {# 浏览量和点赞量 #}
+                        <div class="blog-stats-footer ms-auto me-3"> {# ms-auto 推到右边，me-3 给时间留出空间 #}
+                            <span class="stat-item">
+                                <i class="fas fa-eye"></i> {{ blog.view_count | default:0}}
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-comment-dots"></i> {{ blog.comment_count | default:0 }}
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-thumbs-up"></i> {{ blog.like_count | default:0 }}
+                            </span>
+                        </div>
+
+                        <div class="text-end"> {# 发布时间 #}
+                            {{ blog.pub_time|date:'Y-m-d H:i' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-center">暂无博客文章。</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# --- 分页导航 --- #}
+    {% if blogs.paginator.num_pages > 1 %} {# 只有当总页数大于1时才显示分页 #}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center"> {# 使用 Bootstrap 的分页样式并居中 #}
+            {# 如果有上一页 #}
+            {% if blogs.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo; 第一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo; 第一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            {# 显示当前页码和总页数 #}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">
+                    {{ blogs.number }} / {{ blogs.paginator.num_pages }}
+                </span>
+            </li>
+
+            {# 如果有下一页 #}
+            {% if blogs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">最后一页 &raquo;</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">最后一页 &raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+{% endblock %}

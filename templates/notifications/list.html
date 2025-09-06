@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}我的通知{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0MDxM+h/f/b/Kx0zBf9Q2+Xv8Xl5P9+7s+228/w/p+XyR/k6+D/S7x8w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+    .notification-actions {
+        display: flex;
+        gap: 5px; /* 按钮之间的间距 */
+        align-items: center; /* 垂直居中 */
+    }
+    /* 使底部按钮组更好看 */
+    .bottom-actions {
+        display: flex;
+        justify-content: flex-end; /* 右对齐 */
+        gap: 10px; /* 按钮之间间距 */
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <h2 class="mb-4">我的通知</h2>
+    {% if unread_notifications_count is not None %}
+        <p class="text-muted">您有 <span class="badge bg-primary">{{ unread_notifications_count }}</span> 条未读通知。</p>
+    {% endif %}
+
+    {% if notifications %}
+        <ul class="list-group">
+            {% for notification in notifications %}
+            <li class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-2 {% if not notification.is_read %}list-group-item-info{% endif %}" id="notification-{{ notification.id }}">
+                <div class="notification-content flex-grow-1 me-md-3 mb-2 mb-md-0">
+                    <h5 class="mb-1">
+                        {% if notification.target_url %}
+                            <a href="{{ notification.target_url }}" class="{% if not notification.is_read %}text-primary{% endif %}">{{ notification.description }}</a>
+                        {% else %}
+                            {{ notification.description }}
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">
+                        {% if notification.actor %}
+                            来自 {{ notification.actor.username }} • 
+                        {% endif %}
+                        {{ notification.created_at|date:"Y年m月d日 H时i分" }}
+                    </small>
+                </div>
+                
+                <div class="notification-actions d-flex justify-content-end align-items-center mt-2">
+                    {% if not notification.is_read %}
+                        <form action="{% url 'blog:mark_notification_as_read' notification.id %}" method="post" class="mark-read-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-secondary me-2">标记为已读</button>
+                        </form>
+                    {% endif %}
+                    {# 如果是已读通知，才显示删除按钮 #}
+                    {% if notification.is_read %}
+                        <form action="{% url 'blog:delete_notification' notification.id %}" method="post" class="delete-notification-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash-alt"></i> 删除
+                            </button>
+                        </form>
+                    {% else %}
+                        {# 如果是未读通知，为了提示用户，可以显示一个禁用或提示的删除按钮 #}
+                        <button type="button" class="btn btn-sm btn-outline-danger disabled delete-btn-placeholder" title="请先标记为已读才能删除">
+                            <i class="fas fa-trash-alt"></i> 删除
+                        </button>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <div class="bottom-actions d-flex justify-content-end mt-3">
+            {# 全部标记为已读按钮 #}
+            <form action="{% url 'blog:mark_all_notifications_as_read' %}" method="post" class="me-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">全部标记为已读</button>
+            </form>
+            {# 新增的删除所有已读通知按钮 #}
+            <form action="{% url 'blog:delete_all_notifications' %}" method="post" id="delete-all-read-notifications-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash-can"></i> 删除所有已读
+                </button>
+            </form>
+        </div>
+
+    {% else %}
+        <p class="text-center text-muted">您目前没有新的通知。</p>
+    {% endif %}
+</div>
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        // CSRF Token 获取函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 辅助函数：更新导航栏的未读通知数量
+        function updateUnreadCount(change) {
+            const unreadBadge = $('.navbar-nav .notifications-bell .badge');
+            let currentCount = parseInt(unreadBadge.text().trim());
+
+            if (isNaN(currentCount)) {
+                currentCount = 0;
+            }
+
+            if (change === 'reset') {
+                currentCount = 0;
+            } else {
+                currentCount += change;
+            }
+
+            if (currentCount <= 0) {
+                unreadBadge.remove();
+            } else {
+                if (unreadBadge.length === 0) {
+                    const bellLink = $('.navbar-nav .notifications-bell a');
+                    const newBadge = $('<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"></span>');
+                    bellLink.append(newBadge);
+                    unreadBadge = newBadge;
+                }
+                unreadBadge.text(currentCount);
+            }
+        }
+
+        // 标记为已读表单提交
+        $(document).on('submit', '.mark-read-form', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const listItem = form.closest('li');
+            const csrfToken = getCookie('csrftoken');
+
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.code === 200) {
+                        listItem.removeClass('list-group-item-info');
+
+                        // ===============================================
+                        // 核心修正：找到禁用的删除按钮，并用一个可点击的删除表单替换它
+                        // ===============================================
+                        const disabledDeleteBtn = listItem.find('.delete-btn-placeholder');
+                        
+                        if (disabledDeleteBtn.length) {
+                             // 从 li 的 id 中提取通知ID
+                            const notificationId = listItem.attr('id').replace('notification-', '');
+                            const deleteUrl = `/notifications/delete/${notificationId}`;
+                            const newDeleteForm = `
+                                <form action="${deleteUrl}" method="post" class="delete-notification-form">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash-alt"></i> 删除
+                                    </button>
+                                </form>
+                            `;
+                            // 用新的可点击表单替换旧的禁用按钮
+                            disabledDeleteBtn.replaceWith(newDeleteForm);
+                        }
+                        
+                        form.remove(); // 移除标记为已读按钮
+                        updateUnreadCount(-1);
+                    } else {
+                        alert('标记已读失败: ' + response.msg);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('网络错误或服务器异常: ' + xhr.responseText);
+                }
+            });
+        });
+
+        // 删除单条通知表单提交
+        $(document).on('submit', '.delete-notification-form', function(e) {
+            e.preventDefault();
+            if (!confirm("确定要删除这条通知吗？")) {
+                return;
+            }
+
+            const form = $(this);
+            const listItem = form.closest('li');
+            const isReadStatusBeforeDelete = !listItem.hasClass('list-group-item-info');
+
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.code === 200) {
+                        listItem.slideUp(200, function() {
+                            $(this).remove();
+                            if (!isReadStatusBeforeDelete) {
+                                updateUnreadCount(-1);
+                            }
+                            if ($('.list-group-item').length === 0) {
+                                $('.list-group').html('<li class="list-group-item text-center text-muted">您目前没有新的通知。</li>');
+                                $('.bottom-actions').remove();
+                            }
+                        });
+                    } else {
+                        alert('删除通知失败: ' + response.msg);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('网络错误或服务器异常: ' + xhr.responseText);
+                }
+            });
+        });
+
+        // 批量标记已读表单提交
+        $(document).on('submit', 'form[action*="mark_all_as_read"]', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const csrfToken = getCookie('csrftoken');
+
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.code === 200) {
+                        $('.list-group-item-info').removeClass('list-group-item-info');
+                        $('.mark-read-form').remove();
+                        // 启用所有已读通知的删除按钮
+                        $('button.disabled[title="请先标记为已读才能删除"]').each(function() {
+                            const disabledBtn = $(this);
+                            const notificationId = disabledBtn.closest('li').attr('id').replace('notification-','');
+                            const deleteUrl = `/notifications/delete/${notificationId}`;
+                            const newDeleteForm = `
+                                <form action="${deleteUrl}" method="post" class="delete-notification-form">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash-alt"></i> 删除
+                                    </button>
+                                </form>
+                            `;
+                            disabledDeleteBtn.replaceWith(newDeleteForm);
+                        });
+                        updateUnreadCount('reset');
+                    } else {
+                        alert('批量标记已读失败: ' + response.msg);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('网络错误或服务器异常: ' + xhr.responseText);
+                }
+            });
+        });
+
+        // 删除所有已读通知表单提交
+        $(document).on('submit', '#delete-all-read-notifications-form', function(e) {
+            e.preventDefault();
+            if (!confirm("确定要删除所有已读通知吗？此操作不可撤销！")) {
+                return;
+            }
+
+            const form = $(this);
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.code === 200) {
+                        $('.list-group-item').each(function() {
+                            const listItem = $(this);
+                            if (!listItem.hasClass('list-group-item-info')) {
+                                listItem.slideUp(200, function() {
+                                    $(this).remove();
+                                    if ($('.list-group-item').length === 0) {
+                                        $('.list-group').html('<li class="list-group-item text-center text-muted">您目前没有新的通知。</li>');
+                                        $('.bottom-actions').remove();
+                                    }
+                                });
+                            }
+                        });
+                        alert(response.msg);
+                    } else {
+                        alert('删除失败: ' + response.msg);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('网络错误或服务器异常: ' + xhr.responseText);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

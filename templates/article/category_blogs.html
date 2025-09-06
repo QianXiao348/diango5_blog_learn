@@ -1,0 +1,92 @@
+{# templates/registration/category_blogs.html #}
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name }} - 博客列表{% endblock %}
+
+{% block main %}
+    <h2>当前分类：{{ category.name }}</h2>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for blog in blogs %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <a href="{% url 'blog:blog_detail' blog_id=blog.id %}" class="text-decoration-none text-dark fw-bold">{{ blog.title|striptags|truncatechars:40 }}</a>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ blog.content|striptags|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer text-body-secondary d-flex justify-content-between align-items-center">
+                        <div>
+                            <img src="{% if blog.author.profile.avatar %}{{ blog.author.profile.avatar.url }}{% else %}{% static 'image/21.png' %}{% endif %}" class="rounded-circle me-2" width="30" height="30" alt="作者头像">{{ blog.author.username }}
+                        </div>
+                        {# 浏览量和点赞量 - 保持与首页一致 #}
+                        <div class="blog-stats-footer ms-auto me-3">
+                            <span class="stat-item">
+                                <i class="fas fa-eye"></i> {{ blog.view_count | default:0}}
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-comment-dots"></i> {{ blog.comment_count | default:0 }}
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-thumbs-up"></i> {{ blog.like_count | default:0 }}
+                            </span>
+                        </div>
+                        <div class="text-end">
+                            {{ blog.pub_time|date:'Y-m-d H:i' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-center">该分类下暂无博客文章。</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# --- 分页导航 --- #}
+    {% if blogs.paginator.num_pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if blogs.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo; 第一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">上一页</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo; 第一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                </li>
+            {% endif %}
+
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">
+                    {{ blogs.number }} / {{ blogs.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if blogs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ blogs.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">最后一页 &raquo;</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">最后一页 &raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+/.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Media and Static Files (if stored locally)
+/media/
+/staticfiles/
+
+# Redis/Docker (if used)
+redis.sock
+.dockerignore
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Django migrations (optional - uncomment if needed)
+# **/migrations/*.py
+# !**/migrations/__init__.py
+
+*.onnx
+*.safetensors

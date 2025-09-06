@@ -1,0 +1,78 @@
+{# article/edit_blog.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}编辑博客 - {{ blog.title }}{% endblock %}
+
+{% block head %}
+    <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script> {# 确保 jQuery 在 wangEditor 之前加载 #}
+    <link rel="stylesheet" href="{% static 'wangeditor/style.css' %}">
+    <script src="{% static 'wangeditor/index.js' %}"></script>
+    {# 如果 pub_blog.js 包含 wangEditor 初始化逻辑，你可能需要重用或复制 #}
+    <script>
+        window.uploadImageUrl = "{% url 'blog:get_image_for_blog' %}"; // 定义图片上传 URL
+    </script>
+    {# 这里我们假设你的 wangEditor 初始化逻辑将在 edit_blog.js 中 #}
+    <script src="{% static 'js/edit_blog.js' %}"></script> 
+    <style>
+        #editor—wrapper {
+            border: 1px solid #ccc;
+            z-index: 100;
+            /* 按需定义 */
+        }
+
+        #toolbar-container {
+            border-bottom: 1px solid #ccc;
+        }
+
+        #editor-container {
+            height: 500px;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <h2 class="mb-4">编辑博客：{{ blog.title }}</h2>
+    <div class="mt-3">
+        <form id="blog-form" method="post" action="{% url 'blog:edit_blog' blog_id=blog.id %}">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="id_title" class="form-label">标题</label> {# id_title 是 Django 默认的表单字段 ID #}
+                <input type="text" name="title" id="id_title" class="form-control" value="{{ form.title.value|default_if_none:'' }}"> {# 预填充标题 #}
+            </div>
+
+            <div class="mb-3">
+                <label for="id_category" class="form-label">分类</label>
+                <select name="category" class="form-select" id="id_category"> {# id_category 是 Django 默认的表单字段 ID #}
+                   {% for category_obj in categories %} {# 注意这里循环的变量名与pub_blog视图传递的context一致 #}
+                       <option value="{{ category_obj.id }}" {% if category_obj.id == form.category.value %}selected{% endif %}>
+                           {{ category_obj.name }}
+                       </option>
+                   {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="for-label">内容</label>
+                <div id="editor—wrapper">
+                    <div id="toolbar-container"></div>
+                    <div id="editor-container"></div>
+                </div>
+                {# 这是一个隐藏的 textarea，wangEditor 会将最终内容同步到这里 #}
+                {# 确保 name="content" 与你的模型字段名一致 #}
+                <textarea name="content" id="editor-content-textarea" style="display: none;">{{ form.content.value|default_if_none:'' }}</textarea> 
+            </div>
+            
+            <div class="mb-3 text-end">
+                <button type="button" class="btn btn-primary" id="submit-btn" data-redirect-url="{% url 'blog:blog_detail' blog_id=0 %}" >保存修改</button>
+                <a href="{% url 'blog:blog_detail' blog_id=blog.id %}" class="btn btn-secondary ms-2">取消</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block script %}
+{# 这里不再是单独的 script 块，而是引入 JS 文件 #}
+{# script 标签在 head 块中已经引入了 edit_blog.js #}
+{% endblock %}

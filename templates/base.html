@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'bootstrap5/bootstrap.min.css' %}">
+    <script src="{% static 'bootstrap5/popper.min.js' %}"></script>
+    <script src="{% static 'bootstrap5/bootstrap.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {# 引入 Font Awesome 图标库，用于显示铃铛图标 #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+<header class="p-3 text-bg-success border-bottom mb-3">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                <svg class="bi me-2" width="20" height="32" role="img" aria-label="Bootstrap">
+                    <use xlink:href="#bootstrap"></use>
+                </svg>
+                <img src="{% static 'image/log.png' %}" alt="" height="30" class="src">
+            </a>
+
+            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                <li><a href="/" class="nav-link px-2 text-white">首页</a></li>
+                <li><a href="{% url 'blog:pub_blog' %}" class="nav-link px-2 text-white">发布博客</a></li>
+
+             {% if request.user.is_superuser %}
+                <li>
+                    <a href="{% url 'blog:moderation_queue' %}" class="nav-link px-2 text-white">
+                        审核
+                        {# 待审核数量的占位符 #}
+                        <span id="pending-moderation-count" class="badge bg-danger rounded-pill"></span>
+                    </a>
+                </li>
+            {% endif %}
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        分类
+                    </a>
+                    <ul class="dropdown-menu">
+                        {% for category in categories %}
+                            <li><a class="dropdown-item" href="{% url 'blog:category_blogs' category.id %}">{{ category.name }}</a></li>
+                        {% empty %}
+                            <li><span class="dropdown-item text-muted">暂无分类</span></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+
+            {# 搜索框 - 增加 me-3 (margin-right: 1rem) 将它向左推一点 #}
+            <form class="col-12 col-lg-auto mb-3 mb-lg-0 me-3" role="search" action="{% url 'blog:search' %}">
+                <input type="search" name="q" class="form-control form-control-dark text-bg-white" placeholder="搜索 ..." aria-label="Search">
+            </form>
+
+            {# 通知铃铛 - 只在用户登录时显示 #}
+            {% if user.is_authenticated %}
+                <div class="notifications-bell me-3"> {# 添加一些右边距，与右侧的用户头像或按钮隔开 #}
+                    <a href="{% url 'blog:notifications_list' %}" class="btn btn-link text-white p-0 position-relative">
+                        <i class="fas fa-bell fa-lg"></i> {# 铃铛图标，fa-lg 增大图标 #}
+                        {# 使用视图或上下文处理器传递过来的 unread_notifications_count 变量 #}
+                        {% if unread_notifications_count %} {# 如果有未读通知数量 #}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_notifications_count }}
+                                <span class="visually-hidden">未读通知</span>
+                            </span>
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+
+            {# 用户头像下拉菜单 / 登录注册按钮 #}
+            {# 这里不再包含通知选项，因为它已经作为独立的铃铛图标显示在外面了 #}
+            {% if user.is_authenticated %}
+                <div class="dropdown text-end">
+                    <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true">
+                        <img src="{% if user_avatar %}{{ user_avatar }}{% else %}{% static 'image/21.png' %}{% endif %}" alt="mdo" width="32" height="32" class="rounded-circle">
+                    </a>
+                    <ul class="dropdown-menu text-small"
+                        style="position: absolute; inset: auto auto 0px 0px; margin: 0px; transform: translate3d(0px, -34px, 0px);"
+                        data-popper-placement="top-start">
+                        <li><a class="dropdown-item" href="{% url 'qxauth:logout' %}">退出登录</a></li>
+                        <li><a class="dropdown-item" href="{% url 'qxauth:edit_profile' user_id=request.user.id %}">编辑信息</a></li>
+                        <li><a class="dropdown-item" href="{% url 'qxauth:user_profile' user_id=request.user.id %}">个人中心</a></li>
+                    </ul>
+                </div>
+            {% else %}
+                <div class="text-end">
+                    <a href="{% url 'qxauth:login' %}" type="button" class="btn btn-outline-light me-2">登录</a>
+                    <a href="{% url 'qxauth:register' %}" type="button" class="btn btn-warning">注册</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="container bg-white p-3 rounded">
+    {% block main %}{% endblock %}
+</main>
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        // CSRF Token 获取函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 仅在用户为管理员时执行此脚本
+        {% if request.user.is_superuser %}
+        const moderationBadge = $('#pending-moderation-count');
+
+        function getModerationCount() {
+            $.ajax({
+                url: "{% url 'blog:get_moderation_count' %}",
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200 && response.data.count > 0) {
+                        moderationBadge.text(response.data.count).show();
+                    } else {
+                        moderationBadge.hide();
+                    }
+                },
+                error: function(xhr) {
+                    console.error("Failed to get moderation count:", xhr.responseJSON);
+                    moderationBadge.hide();
+                }
+            });
+        }
+        
+        // 页面加载时立即获取数量
+        getModerationCount();
+        
+        // 可选：设置定时刷新，例如每分钟刷新一次
+        // setInterval(getModerationCount, 60 * 1000); 
+        {% endif %}
+    });
+</script>
+</body>
+
+</html>

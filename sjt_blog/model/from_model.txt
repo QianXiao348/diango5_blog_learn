@@ -1,0 +1,43 @@
+hfl/chinese-bert-wwm-ext
+
+--- 2. 评估预训练模型（未fine-tune） ---
+测试集准确率: 0.3970
+
+分类报告:
+              precision    recall  f1-score   support
+
+           0       1.00      0.00      0.00      3216
+           1       0.40      1.00      0.57      2107
+
+    accuracy                           0.40      5323
+   macro avg       0.70      0.50      0.29      5323
+weighted avg       0.76      0.40      0.23      5323
+
+混淆矩阵:
+[[   6 3210]
+ [   0 2107]]
+
+
+Epoch 4/20
+训练损失: 0.0069  训练准确率: 0.9612
+验证集准确率: 0.8294
+
+分类报告:
+              precision    recall  f1-score   support
+
+           0       0.91      0.80      0.85      3216
+           1       0.74      0.88      0.80      2107
+
+    accuracy                           0.83      5323
+   macro avg       0.82      0.84      0.83      5323
+weighted avg       0.84      0.83      0.83      5323
+
+混淆矩阵:
+[[2566  650]
+ [ 258 1849]]
+验证集准确率提高到 0.8294，保存模型...
+模型已保存!
+
+
+/kaggle/input/conten2/train.csv
+/kaggle/input/conten2/test.csv

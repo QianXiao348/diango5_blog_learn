@@ -1,0 +1,170 @@
+{# templates/blog/moderation_detail.html #}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}审核详情 - #{{ log.id }}{% endblock %}
+
+{% block head %}
+    <style>
+        /* 确保图片不会超出其容器的宽度 */
+        .moderation-content img,
+        .moderation-content .w-e-text-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .form-error-message {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <h2>审核详情 - #{{ log.id }}</h2>
+                <div class="card p-4 shadow-sm">
+                    <h4 class="mb-3">待审核内容</h4>
+                    <small class="text-muted">
+                        {% if not log.flagged_by_ai%}
+                            来源: **用户举报** | 举报者: {{ log.reporter.username }}
+                        {% else %}
+                            来源: AI标记
+                        {% endif %}
+                        | 发布作者: {{ log.author.username }} • {{ log.created_at|date:"Y-m-d H:i" }}
+                    </small>
+                    <hr>
+
+                    <div class="moderation-content">
+                    {% if log.content_type == 'blog' %}
+                        <h5 class="fw-bold">标题:</h5>
+                        <p class="lead">{{ processed_content.title }}</p>
+
+                        <h5 class="fw-bold mt-3">内容:</h5>
+                        <div class="mt-3">{{ processed_content.content | safe }}</div>
+                        <small class="text-muted mt-3 d-block">分类: {{ log.category.name }}</small>
+                    {% elif log.content_type == 'comment' %}
+                        <h5 class="fw-bold">评论内容：</h5>
+                        <p class="mt-3">{{ processed_content.content | linebreaksbr }}</p>
+                        <small class="text-muted mt-3 d-block">所属博客ID: {{ processed_content.blog_id }}</small>
+                        {% if processed_content.parent_comment_id %}
+                            <small class="text-muted d-block">回复评论ID: {{ processed_content.parent_comment_id }}</small>
+                        {% endif %}
+                    {% endif %}
+                    </div>
+                    
+                    <hr>
+                    <div class="text-danger">
+                        {% if not log.flagged_by_ai%}
+                            <strong>举报原因:</strong>
+                        {% else %}
+                            <strong>AI标记原因:</strong>
+                        {% endif %}
+                        <p id="ai-reason-text">{{ log.reason }}</p>
+                    </div>
+                
+                    <div class="mt-3">
+                        <label for="review-reason-textarea" class="form-label fw-bold">人工复核原因（选填）：</label>
+                        <textarea class="form-control" id="review-reason-textarea" rows="3" placeholder="填写自定义拒绝原因，不填则使用默认理由"></textarea>
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-success me-2 review-action-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
+                        <button type="button" class="btn btn-danger" id="reject-btn" data-log-id="{{ log.id }}">拒绝</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+        // CSRF Token 获取函数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 审核操作按钮的点击事件 (包括“通过”)
+        $('.review-action-btn').on('click', function() {
+            const btn = $(this);
+            const logId = btn.data('log-id');
+            const action = btn.data('action');
+
+            if (!confirm('确定要通过这条内容吗？')) {
+                return;
+            }
+            // 直接执行通过操作，不带原因
+            performReviewAction(logId, action, '');
+        });
+
+        // “拒绝”按钮的点击事件
+        $('#reject-btn').on('click', function() {
+            const btn = $(this);
+            const logId = btn.data('log-id');
+            const customReason = $('#review-reason-textarea').val().trim();
+            
+            // 如果管理员没有填写自定义原因，则使用默认理由
+            // 无论是AI标记还是举报，默认理由都存储在 log.reason 中
+            const reasonToSend = customReason || $('#ai-reason-text').text().trim();
+
+            if (!confirm(`确定要拒绝这条内容吗？\n原因：${reasonToSend}`)) {
+                return;
+            }
+
+            // 执行拒绝操作，带上原因
+            performReviewAction(logId, 'reject', reasonToSend);
+        });
+        
+        // 执行 AJAX 请求的通用函数
+        function performReviewAction(logId, action, reason) {
+            const postData = { 'csrfmiddlewaretoken': getCookie('csrftoken') };
+            
+            // 只有当原因存在时才发送 reason 参数
+            if (reason) {
+                postData.reason = reason;
+            }
+
+            $.ajax({
+                url: `/moderation/action/${logId}/${action}/`,
+                method: 'POST',
+                data: postData,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                success: function(response) {
+                    alert(response.msg);
+                    if (response.code === 200) {
+                        window.location.href = "{% url 'blog:moderation_queue' %}"; // 审核成功后返回队列
+                    }
+                },
+                error: function(jqXHR) {
+                    let errorMsg = '操作失败！';
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                        errorMsg = jqXHR.responseJSON.message;
+                    } else if (jqXHR.status === 404) {
+                        errorMsg = '请求地址错误！';
+                    } else if (jqXHR.status === 500) {
+                        errorMsg = '服务器内部错误！';
+                    }
+                    alert(errorMsg);
+                    console.error('AJAX Error:', jqXHR);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
