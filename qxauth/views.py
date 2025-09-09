@@ -131,6 +131,7 @@ def edit_profile(request, user_id):
             profile.phone = profile_cd['phone']
             profile.birth = profile_cd['birth']
             profile.bio = profile_cd['bio']
+            profile.gender = profile_cd['gender']
 
             # 如果 request.FILES 存在文件，则保存
             if 'avatar' in request.FILES:

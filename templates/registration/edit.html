@@ -22,21 +22,27 @@
                         <label for="avatar">上传头像</label>
                         <input type="file" class="form-control-file" name="avatar" id="avatar">
                     </div>
-
+                    <div class="form-group col-md-3">
+                    <label for="gender">性别</label>
+                    <select class="form-control" id="gender" name="gender">
+                        <option value="male" {% if profile.gender == 'male' %}selected{% endif %}>男</option>
+                        <option value="female" {% if profile.gender == 'female' %}selected{% endif %}>女</option>
+                    </select>
+                    </div>
                     <!-- phone -->
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <label for="phone">电话</label>
                         <input type="text" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                     <label for="birth">出生年月日</label>
                     <input type="date" class="form-control" id="birth" name="birth" value="{{ profile.birth|date:'Y-m-d'}}">
             </div>
             <!-- bio -->
-            <div class="form-group col-md-4">
+            <div class="form-group col-md-3">
                 <label for="bio">简介</label>
                 <!-- 文本区域 -->
-                <textarea type="text" class="form-control" id="bio" name="bio" rows="12">{{ profile.bio }}</textarea>
+                <textarea type="text" class="form-control" id="bio" name="bio" rows="6">{{ profile.bio }}</textarea>
             </div>
             <a href="{% url 'qxauth:password_change' %}" class="btn btn-link">修改密码</a>
             <!-- 提交按钮 -->
