@@ -91,8 +91,9 @@ def send_email_captcha(request):
     if not email:
         return JsonResponse({"code":400, "message":'必须传递邮件！'})
     # 生成验证码（取随机前4位阿拉伯数字） [0,3,2,5...]
-    captcha = ''.join(random.sample(string.digits, 6))
-
+    # captcha = ''.join(random.sample(string.digits, 6))
+    #测试固定验证码
+    captcha = '123456'
     # 存入 Redis，设置过期时间为 5 分钟（300 秒）
     cache.set(email, captcha, 300)
     

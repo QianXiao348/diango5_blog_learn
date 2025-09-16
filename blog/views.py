@@ -75,9 +75,8 @@ def blog_detail(request, blog_id):
         is_liked = BlogLike.objects.filter(blog=blog, user=request.user).exists()
 
     # 获取顶级评论
-    comment_list = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related('author',
-                                                                                             'reply_to').order_by(
-        'tree_id', 'lft')
+    comment_list = BlogComment.objects.filter(blog=blog, parent__isnull=True).select_related(
+                        'author', 'reply_to').order_by('tree_id', 'lft')
     processed_comments = []
     for comment in comment_list:
         comment.display_level = min(comment.level, 1)

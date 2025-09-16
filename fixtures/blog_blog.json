@@ -1,0 +1,282 @@
+[
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 11,
+            "title": "TypeScript 5.0新特性速览：装饰器与枚举",
+            "content": "<p>TypeScript 5.0带来了ECMAScript标准的装饰器支持，以及对枚举类型的重大改进。本文将通过简洁的例子，带你了解这些新特性如何提升代码的可读性和可维护性。</p><pre><code class=\"language-ts\">// 装饰器新语法\n@log\nclass MyClass {\n  // ...\n}\n\n// 改进的枚举\nconst enum Direction { Up, Down }\n</code></pre><p>装饰器可以直接应用于类和方法，而不需要实验性标记。同时，`const enum`的编译行为也得到了优化...</p>",
+            "pub_time": "2025-08-10 09:20:15.123456",
+            "view_count": 8,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 12,
+            "title": "React 19预览：useTransition与并发模式",
+            "content": "<p>React 19正式进入预览阶段，`useTransition`钩子让状态更新变得非阻塞，有效解决了UI卡顿问题。本文将深入探讨并发模式下的数据流管理。</p><pre><code class=\"language-jsx\">import { useTransition } from 'react';\n\nconst [isPending, startTransition] = useTransition();\n\nconst handleClick = () => {\n  startTransition(() => {\n    // 非紧急状态更新\n  });\n};\n</code></pre><p>通过将耗时计算包装在`startTransition`中，我们可以让浏览器优先渲染紧急的UI更新...</p>",
+            "pub_time": "2025-08-11 14:45:30.987654",
+            "view_count": 15,
+            "like_count": 3,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 13,
+            "title": "成为自由职业者的第一步：如何寻找客户？",
+            "content": "<p>​想成为一名成功的自由职业者？第一步就是找到客户。本文分享了几个行之有效的客户寻找渠道和策略。</p><p><strong>1. 建立个人品牌​</strong></p><p>​通过博客、GitHub和技术社区展示你的专业技能和项目经验。</p><p><strong>2. 参与线上线下活动​</strong></p><p>​在技术交流会或行业会议上扩大人脉，寻找潜在合作机会。</p>",
+            "pub_time": "2025-08-12 10:10:55.432109",
+            "view_count": 10,
+            "like_count": 2,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 14,
+            "title": "如何打造一个令人难忘的个人网站主页？",
+            "content": "<p>一个好的个人网站主页是展示自我的窗口。这篇文章将从设计、内容和技术三个角度，告诉你如何打造一个独具特色的主页。</p><p><strong>🎨 设计风格​</strong></p><p>​选择简洁、一致的配色方案和字体，突出个人风格。</p><p><strong>📝 内容策略​</strong></p><p>​首页突出你的核心技能和项目，用精炼的语言介绍自己。</p>",
+            "pub_time": "2025-08-13 16:30:22.567890",
+            "view_count": 7,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 15,
+            "title": "电影《沙丘》的视觉设计：从小说到大银幕的史诗之旅",
+            "content": "<p>《沙丘》不仅是一部科幻史诗，更是一场视觉盛宴。本文将深入解析电影的服装、布景和道具设计，探讨如何通过这些细节构建一个可信且宏大的世界观。</p><p><strong>🏜️ 阿拉基斯星球的沙与光​</strong></p><p>​沙漠行星的广阔与荒凉通过冷色调和极简主义建筑完美呈现...</p>",
+            "pub_time": "2025-08-14 11:55:45.345678",
+            "view_count": 9,
+            "like_count": 2,
+            "author_id": 2,
+            "category_id": 9,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 16,
+            "title": "当代码遇上艺术：生成式设计的前世今生",
+            "content": "<p>生成式设计，一种用算法创造艺术的新兴领域。从波洛克的泼墨画到现代的数字艺术，本文将带你探索代码如何成为新的画笔。</p><pre><code class=\"language-python\">import random\n\n# 简单的生成式艺术示例\nfor _ in range(100):\n  x = random.randint(0, 500)\n  y = random.randint(0, 500)\n  # 绘制随机点...\n</code></pre><p>通过简单的规则和随机性，我们可以创造出意想不到的视觉效果...</p>",
+            "pub_time": "2025-08-15 17:00:01.876543",
+            "view_count": 12,
+            "like_count": 3,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 17,
+            "title": "探访北京胡同里的独立书店",
+            "content": "<p>​北京的胡同里藏着许多宝藏，独立书店就是其中之一。本文记录了我在南锣鼓巷、杨梅竹斜街几家特色书店的探店心得。</p><p><strong>📚 码字人书店​</strong></p><p>​📍 南锣鼓巷小菊儿胡同 | 推荐：文学类、历史类书籍</p><p>小而美的空间，店主精心挑选的书籍充满了人文气息...</p>",
+            "pub_time": "2025-08-16 12:25:34.765432",
+            "view_count": 5,
+            "like_count": 0,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 18,
+            "title": "如何用5G技术打造下一代智能家居？",
+            "content": "<p>5G的超高速率和低延迟为智能家居带来了全新的可能性。本文探讨了5G技术在智能家居场景下的应用和挑战。</p><p>​<strong>⚡ 5G + AIoT​</strong></p><p>​通过5G网络，家庭设备可以实现更快的互联和更智能的协同，例如实时监控和远程控制...</p>",
+            "pub_time": "2025-08-17 18:40:51.908765",
+            "view_count": 14,
+            "like_count": 2,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 19,
+            "title": "极简主义生活方式：从衣橱开始的减法人生",
+            "content": "<p>​极简主义不仅仅是一种设计风格，更是一种生活态度。本文将分享如何从整理衣橱开始，实践极简主义，让生活回归本真。</p><p><strong>👕 胶囊衣橱​</strong></p><p>​只保留少量经典、百搭的衣物，减少选择时间，提升生活效率。</p>",
+            "pub_time": "2025-08-18 08:50:29.112233",
+            "view_count": 6,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 20,
+            "title": "火星探测：NASA“毅力号”的最新发现",
+            "content": "<p>​NASA“毅力号”火星车正在对火星地表进行深入探索。本文整理了其传回的最新图像和科学数据，带你一睹红色星球的神秘面貌。</p><p>​<img src=\"/media/articles/20250819/mars-rover.jpg\" alt=\"mars-rover.jpg\"></p><p>​​**🔬 寻找生命迹象**</p><p>​“毅力号”的主要任务之一是寻找古代微生物生命的迹象...</p>",
+            "pub_time": "2025-08-19 19:15:10.778899",
+            "view_count": 18,
+            "like_count": 4,
+            "author_id": 2,
+            "category_id": 9,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 21,
+            "title": "自然之声：如何用环境音效提高专注力",
+            "content": "<p>​研究表明，自然环境音效，如雨声、海浪声，可以有效降低焦虑，提升工作和学习时的专注力。本文将为你推荐几款环境音效应用。</p><p>​<strong>🎶 白噪音 vs. 环境音效</strong></p><p>​白噪音掩盖了其他声音，而环境音效则能创造一个舒适的听觉环境...</p>",
+            "pub_time": "2025-08-20 09:40:25.223344",
+            "view_count": 4,
+            "like_count": 0,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 22,
+            "title": "揭秘《赛博朋克2077》的城市设计：夜之城的秘密",
+            "content": "<p>​《赛博朋克2077》的夜之城是游戏界最令人惊叹的虚拟城市之一。本文将从建筑、光影和人文三个维度，分析其背后的设计理念。</p><p>​<img src=\"/media/articles/20250821/cyberpunk-nightcity.jpg\" alt=\"cyberpunk-nightcity.jpg\"></p><p>​**🏙️ 垂直都市​**</p><p>​夜之城以高耸入云的摩天大楼和多层立交桥闻名，体现了未来都市的垂直化趋势...</p>",
+            "pub_time": "2025-08-21 15:50:59.667788",
+            "view_count": 11,
+            "like_count": 3,
+            "author_id": 2,
+            "category_id": 9,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 23,
+            "title": "用AI生成图像：Midjourney与Stable Diffusion对比评测",
+            "content": "<p>​Midjourney和Stable Diffusion是目前最受欢迎的两款AI图像生成工具。本文将从易用性、生成质量和可控性三个方面，对两者进行详细评测。</p><p>​**🎨 生成效果**</p><p>​Midjourney更擅长艺术风格和美学表现，而Stable Diffusion在细节和可定制性上更具优势...</p>",
+            "pub_time": "2025-08-22 10:05:40.445566",
+            "view_count": 20,
+            "like_count": 5,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 24,
+            "title": "高效时间管理：番茄工作法的终极指南",
+            "content": "<p>​番茄工作法是一种简单而有效的时间管理技术。本文将为你提供一个终极指南，包括如何设置番茄钟、处理干扰以及调整工作节奏。</p><p>​**⏰ 核心原则**</p><p>​25分钟专注工作，5分钟短暂休息，每完成四个番茄钟后进行一次长时间休息...</p>",
+            "pub_time": "2025-08-23 14:35:18.998877",
+            "view_count": 9,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 25,
+            "title": "探索地球秘境：世界上最神秘的五大国家公园",
+            "content": "<p>​从南美洲的亚马逊雨林到澳大利亚的卡卡杜国家公园，这些地方充满了令人惊叹的自然奇观和未知的生物。本文将带你领略地球上最神秘的五大国家公园。</p><p>​<img src=\"/media/articles/20250824/national-park.jpg\" alt=\"national-park.jpg\"></p><p>​**🏞️ 亚马逊国家公园​**</p><p>​拥有地球上最丰富的生物多样性，是真正的“地球之肺”...</p>",
+            "pub_time": "2025-08-24 18:55:04.334455",
+            "view_count": 7,
+            "like_count": 0,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 26,
+            "title": "区块链技术入门：从比特币到智能合约",
+            "content": "<p>​区块链不仅仅是加密货币的底层技术，它在金融、供应链和数字身份等领域有着广泛应用。本文将以通俗易懂的方式，为你讲解区块链的核心概念。</p><p>​**🔗 去中心化**</p><p>​区块链的去中心化特性意味着没有单一的控制中心，所有数据都由网络中的节点共同维护...</p>",
+            "pub_time": "2025-08-25 11:10:33.556677",
+            "view_count": 13,
+            "like_count": 2,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 27,
+            "title": "如何在家制作一杯完美的意式浓缩咖啡？",
+            "content": "<p>​对于咖啡爱好者来说，在家制作一杯完美的意式浓缩咖啡是终极目标。本文将为你提供详细的步骤和技巧，从磨豆到萃取，每一步都至关重要。</p><p>​**☕ 黄金比例**</p><p>​意式浓缩咖啡的黄金比例通常是1:2，即1份咖啡粉萃取出2份浓缩液...</p>",
+            "pub_time": "2025-08-26 13:45:01.112233",
+            "view_count": 6,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 28,
+            "title": "从《黑客帝国》到《银翼杀手》：赛博朋克电影中的哲学思考",
+            "content": "<p>​赛博朋克不仅仅是一种视觉风格，它还蕴含着对人性、技术和社会的深刻思考。本文将通过几部经典电影，探讨赛博朋克电影中的哲学命题。</p><p>​**🤔 什么是“真实”？**</p><p>​《黑客帝国》提出的“缸中之脑”问题，至今仍让人深思...</p>",
+            "pub_time": "2025-08-27 16:20:55.776688",
+            "view_count": 10,
+            "like_count": 2,
+            "author_id": 2,
+            "category_id": 9,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 29,
+            "title": "使用WebAssembly提升Web应用性能",
+            "content": "<p>​WebAssembly (Wasm)是一种为浏览器设计的低级语言。它可以让其他语言（如C++、Rust）的代码在浏览器中以接近原生速度运行。本文将通过一个简单的示例，展示如何将Wasm集成到你的Web项目中。</p><pre><code class=\"language-rust\">fn add(a: i32, b: i32) -> i32 {\n  a + b\n}\n</code></pre><p>通过Wasm，我们可以在Web端运行计算密集型任务，如视频编解码、3D渲染和游戏...</p>",
+            "pub_time": "2025-08-28 09:30:11.990011",
+            "view_count": 15,
+            "like_count": 3,
+            "author_id": 2,
+            "category_id": 7,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    },
+    {
+        "model": "blog.Blog",
+        "fields": {
+            "id": 30,
+            "title": "如何选择适合你的运动鞋？",
+            "content": "<p>​市面上的运动鞋种类繁多，如何选择一双适合自己的鞋子？本文将从脚型、运动类型和材质三个方面，为你提供专业的选购建议。</p><p>​**👟 脚型测试​**</p><p>​湿脚印测试是判断脚型的好方法，根据脚印形状选择合适的鞋型...</p>",
+            "pub_time": "2025-08-29 14:15:44.223344",
+            "view_count": 8,
+            "like_count": 1,
+            "author_id": 2,
+            "category_id": 8,
+            "create_time": "2025-09-09 11:08:08.961808"
+        }
+    }
+]
