@@ -28,7 +28,8 @@ User = get_user_model()
 def qxlogin(request):
     """ 用户登录 """
     if request.method == 'GET':
-        return render(request, 'registration/login.html')
+        form = LoginForm()  # GET请求时也传递一个空表单，用于渲染字段
+        return render(request, 'registration/login.html', {'form': form})
     else:
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -41,12 +42,16 @@ def qxlogin(request):
                 if not remember:
                     # 默认的session会保留2周，反过来处理不需要记住我，设置过期时间位0
                     request.session.set_expiry(0)
-                return redirect('/')  # 登录成功后跳转到首页
-                # return JsonResponse({'code': 200, "message": "登录成功"})
+                # return redirect('/')  # 登录成功后跳转到首页
+                return JsonResponse({'code': 200, "message": "登录成功", 'redirect_url': reverse('blog:index')})
             else:
+                form.add_error(None, '邮箱或密码不正确。')
                 print("邮箱或密码错误！")
-                return JsonResponse({'code':401,"message":"注册输入有误。请再次检查输入邮箱或密码是否符合标准，并重新输入~"})
-                # return redirect(reverse('qxauth:login'))
+                return JsonResponse({'code': 400, "message": "登录信息有误", 'errors': form.errors})
+        else:
+            print(form.errors)
+            return JsonResponse({'code': 400, "message": "表单验证失败", 'errors': form.errors})
+
 
 # 用户登出
 def qxlogout(request):
