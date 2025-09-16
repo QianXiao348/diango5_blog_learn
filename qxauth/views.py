@@ -19,6 +19,7 @@ from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF �
 from .models import Profile, Follow
 from .forms import RegisterForm, LoginForm, ProfileForm
 from blog.models import Blog
+from .tasks import send_email_async
 
 User = get_user_model()
 
@@ -59,14 +60,6 @@ def register(request):
         return render(request, 'registration/register.html')
     else:
         form = RegisterForm(request.POST)
-        input_code = request.POST.get('captcha') # 前端表单中用户输入的验证码
-        email = request.POST.get('email')
-        
-        redis_code = cache.get(email)
-        # print(redis_code)
-        # print(input_code)
-        if not redis_code or input_code != redis_code:
-            return HttpResponse("验证码无效或已过期，请重新获取~")
         
         if form.is_valid():
             email = form.cleaned_data.get('email')
@@ -78,9 +71,6 @@ def register(request):
         else:
             print(form.errors)
             return HttpResponse(form.errors)
-            # 重新跳转到注册页面
-            # return redirect(reverse('qxauth:register'))
-            # return render(request, 'register.html', context={'form':form})
 
 
 def send_email_captcha(request):
@@ -91,18 +81,16 @@ def send_email_captcha(request):
     if not email:
         return JsonResponse({"code":400, "message":'必须传递邮件！'})
     # 生成验证码（取随机前4位阿拉伯数字） [0,3,2,5...]
-    # captcha = ''.join(random.sample(string.digits, 6))
+    captcha = ''.join(random.sample(string.digits, 6))
     #测试固定验证码
-    captcha = '123456'
+    # captcha = '123456'
     # 存入 Redis，设置过期时间为 5 分钟（300 秒）
     cache.set(email, captcha, 300)
-    
-    send_mail(
-        "博客注册验证码",
-        message=f'您的验证码是：{captcha}，5分钟内有效~喵', 
-        recipient_list=[email],
-        from_email=None, # 这个参数不能少
-        fail_silently=False)
+
+    subject = '博客注册验证码'
+    message = f'您的验证码是：{captcha}，5分钟内有效~喵'
+    recipient_list = [email]
+    send_email_async.delay(subject, message, recipient_list, from_email=None)
     
     return JsonResponse({"code":200, "message": "邮箱验证码发送成功！"})
 

@@ -55,7 +55,7 @@ class RegisterForm(forms.Form):
         real_captcha = cache.get(email)
         if not real_captcha or real_captcha != captcha:
             raise forms.ValidationError('验证码错误或已过期！')
-        cache.delete(f'email_captcha:{email}') 
+        cache.delete(email)
         return captcha
         
 

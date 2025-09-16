@@ -43,8 +43,8 @@ INSTALLED_APPS = [
     'blog',
     'qxauth',
     'sjt_blog',
-    # 树形结构
     'mptt',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -94,11 +94,14 @@ DATABASES = {
     }
 }
 
+# celery 配置
+CELERY_BROKER_URL = 'redis://127.0.0.1:6380/1'
+CELERY_RESULT_BACKEND = 'django-db'
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # 1 号数据库
+        "LOCATION": "redis://127.0.0.1:6380/1",  # 1 号数据库
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
