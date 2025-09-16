@@ -13,7 +13,7 @@ urlpatterns = [
     # 注册
     path('register', views.register, name='register'),
     # 发送验证码
-    path('captcha', views.send_email_captcha, name='send_email_captcha'),
+    path('send_captcha', views.send_email_captcha, name='send_email_captcha'),
     # 登出
     path('logout', views.qxlogout, name='logout'),
     # 编辑用户信息

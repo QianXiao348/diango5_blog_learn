@@ -1,33 +1,44 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}注册博客{% endblock %}
 
 {% block head %}
     <script src="{% static 'jquery/jquery-3.7.1.min.js' %}"></script>
-    <script src="{% static 'js/register.js' %}"></script>
+    {# register.js 会在 main block 之后加载，确保 DOM 已经准备好 #}
 {% endblock %}
 
 {% block main %}
 <main class="container bg-white p-3 rounded">
         <div style="max-width: 330px;" class="mx-auto">
             <h1>注册</h1>
-            <form action="" method="post">
+            {# ！！给表单添加一个 ID ！！ #}
+            <form id="register-form" action="{% url 'qxauth:register' %}" method="post">
                 {% csrf_token %}
+                {# 通用错误信息显示区域，默认隐藏 #}
+                <div id="form-general-message" class="alert alert-danger" style="display: none; margin-bottom: 10px;"></div>
+
+                {# 确保每个输入框有唯一的 name 属性 #}
                 <div class="mb-2">
                     <label>用户名</label>
                     <input type="text" name="username" class="form-control" placeholder="请输入用户名">
+                    {# 字段特定错误显示区域 #}
+                    <div id="error-username" class="text-danger small" style="display: none;"></div>
                 </div>
                 <div class="mb-2">
                     <label>邮箱</label>
                     <input type="email" name="email" class="form-control" placeholder="请输入邮箱">
+                    <div id="error-email" class="text-danger small" style="display: none;"></div>
                 </div>
                 <div class="mb-2">
                     <label>密码</label>
                     <input type="password" name="password" class="form-control" placeholder="请输入密码">
+                    <div id="error-password" class="text-danger small" style="display: none;"></div>
                 </div>
                 <div class="mb-2">
                     <label>重复密码</label>
                     <input type="password" name="password2" class="form-control" placeholder="请重复输入密码">
+                    <div id="error-password2" class="text-danger small" style="display: none;"></div>
                 </div>
                 <div class="mb-2">
                     <label>验证码</label>
@@ -36,13 +47,18 @@
                             aria-describedby="button-addon2">
                         <button class="btn btn-outline-secondary" type="button" id="captcha-btn">获取验证码</button>
                     </div>
+                    <div id="error-captcha" class="text-danger small" style="display: none;"></div>
                 </div>
+                {# 非字段错误（如两次密码不一致）显示区域 #}
+                <div id="error-__all__" class="alert alert-danger small" style="display: none;"></div>
+
                 <div class="mb-2">
-                    <button class="btn btn-success w-100">
+                    <button class="btn btn-success w-100" type="submit">
                         立即注册
                     </button>
                 </div>
             </form>
         </div>
     </main>
+    <script src="{% static 'js/register.js' %}"></script> {# 将JS放在这里，确保DOM加载完成 #}
 {% endblock %}

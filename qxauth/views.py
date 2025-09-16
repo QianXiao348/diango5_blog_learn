@@ -57,7 +57,8 @@ def qxlogout(request):
 @require_http_methods(['GET', 'POST'])
 def register(request):
     if request.method == 'GET':
-        return render(request, 'registration/register.html')
+        form = RegisterForm()
+        return render(request, 'registration/register.html', {'form': form})
     else:
         form = RegisterForm(request.POST)
         
@@ -67,10 +68,11 @@ def register(request):
             password = form.cleaned_data.get('password')
             # 用户的注册
             User.objects.create_user(email=email, username=username, password=password)
-            return redirect(reverse('qxauth:login'))
+            return JsonResponse({'code': 200, 'message': '注册成功！', 'redirect_url': reverse('qxauth:login')})
         else:
+            # 验证失败，返回 JSON 响应，包含错误信息
             print(form.errors)
-            return HttpResponse(form.errors)
+            return JsonResponse({'code': 400, 'message': '表单验证失败', 'errors': form.errors})
 
 
 def send_email_captcha(request):

@@ -47,6 +47,13 @@ class RegisterForm(forms.Form):
             raise forms.ValidationError('邮箱已被注册！')
         return email
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        exists = User.objects.filter(username=username).exists()
+        if exists:
+            raise forms.ValidationError('用户名已存在！')
+        return username
+
     # 检验验证码
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
@@ -55,7 +62,9 @@ class RegisterForm(forms.Form):
         real_captcha = cache.get(email)
         if not real_captcha or real_captcha != captcha:
             raise forms.ValidationError('验证码错误或已过期！')
-        cache.delete(email)
+        else:
+            cache.delete(email)
+            print(f'{email}验证码已删除！')
         return captcha
         
 
