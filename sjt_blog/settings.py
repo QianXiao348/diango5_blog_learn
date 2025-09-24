@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'sjt_blog',
     'mptt',
     'django_celery_results',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [

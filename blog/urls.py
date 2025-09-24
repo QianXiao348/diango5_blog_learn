@@ -49,4 +49,6 @@ urlpatterns = [
     path('moderation/detail/<int:log_id>/', views.moderation_detail, name='moderation_detail'),
     # 举报
     path('blog/report/<int:blog_id>/', views.report_post, name='report_post'),
+    # 热门博客
+    path('blog/hot/', views.hot_blogs, name='hot_blogs'),
 ]

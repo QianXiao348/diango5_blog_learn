@@ -14,6 +14,7 @@ from django.core.files.storage import default_storage
 from django.db import IntegrityError
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt  # 测试时 禁用 CSRF 验证
+from django.core.cache import cache
 
 from .moderation import moderate_content
 from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike, ModerationLog, User
@@ -35,6 +36,35 @@ def index(request):
     blogs = paginator.get_page(page)  # 获取指定页面的数据
 
     return render(request, 'registration/index.html', context={'blogs': blogs})
+
+
+def hot_blogs(request):
+    """
+    热门博客，按综合分数排序，取前20篇
+    """
+    cache_key = 'hot_blogs'
+    hot_blogs = cache.get(cache_key)
+    if not hot_blogs:
+        blogs = Blog.objects.select_related('author', 'category').annotate(
+            comment_count=Count('comments'),
+            hot_score=F('like_count')*2 + F('view_count')*3 + F('comment_count')*5
+        ).order_by('-hot_score')[:20]
+        hot_blogs_list = list(blogs.values(
+            'id', 'title', 'content', 'view_count', 'like_count', 'comment_count',
+            'pub_time', 'author__username', 'category__name'
+        ))
+        try:
+            cache.set(cache_key, hot_blogs_list, timeout=60 * 1)
+            print("缓存设置成功")
+        except Exception as e:
+            print(f"缓存设置失败: {e}")
+        hot_blogs=hot_blogs_list
+
+    paginator = Paginator(hot_blogs, 6)
+    page = request.GET.get('page')
+    blogs = paginator.get_page(page)
+
+    return render(request, 'article/hot_blogs.html', context={'blogs': blogs})
 
 
 @require_GET
