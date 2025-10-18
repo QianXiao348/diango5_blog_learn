@@ -1,11 +1,65 @@
-body{
-    background-color: rgba(255, 255, 255, 0.1);
+/* 可调半透明背景，不影响正文阅读 */
+:root {
+    /* 透明度（0~1），数值越小越透明 */
+    --bg-overlay-alpha: 0.35;
+    /* 遮罩颜色：默认黑色用于压暗背景；如需变亮可改为 255,255,255 */
+    --bg-overlay-color: 0, 0, 0;
+    /* 内容容器白色透明度（0~1）：越小越能看到背景 */
+    --content-bg-alpha: 0.82;
+    --overlay-alpha: 0.18;    /* 背景叠加层透明度（越小越透明） */
 }
 
+/* 背景图：不直接影响内容透明度 */
+body {
+    position: relative; /* 让 ::before 形成可靠的叠层 */
+    background-image: url('/static/image/blog_background.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center;
+}
+
+/* 半透明遮罩（覆盖在背景图上，但不影响正文元素） */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0; /* top:0; right:0; bottom:0; left:0; 的简写 */
+    background: rgba(var(--bg-overlay-color), var(--bg-overlay-alpha));
+    pointer-events: none; /* 防止遮罩拦截鼠标事件 */
+    z-index: 0; /* 在正文之下，确保不影响交互 */
+}
+
+/* 调整叠层顺序：header 置于 main 之上，避免下拉菜单被主体遮挡 */
+header {
+    position: relative;
+    z-index: 1040; /* 高于主体内容，确保 dropdown 显示与点击不被拦截 */
+}
+
+main {
+    position: relative;
+    /* 移除 z-index 以避免创建新的叠层上下文，确保 Bootstrap 模态框位于 backdrop 之上 */
+}
+
+/* 主体内容容器半透明白底 + 阴影与圆角 */
+main.container.bg-white {
+    background-color: rgba(255, 255, 255, var(--content-bg-alpha)) !important;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+}
+
+/* 博文内图片保持良好显示比例 */
 .blog-content img,
 .w-e-text-container img {
-    max-width: 90%; /* 图片最大宽度不超过其父容器 */
-    height: auto;    /* 保持图片纵横比 */
-    display: block;  /* 确保图片是块级元素，避免底部空白 */
-    margin: 0 ;  /* 如果想让图片靠左显示 */
+    max-width: 90%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+/* 代码块更易读 */
+.blog-content pre {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    overflow: auto;
 }

@@ -75,7 +75,7 @@ TEMPLATES = [
                 'blog.context_processors.notifications_context'
             ],
             # 这里加载
-            'builtins':['django.templatetags.static']
+            'builtins':['django.templatetags.static', 'blog.templatetags.pagination_tags']
         },
     },
 ]

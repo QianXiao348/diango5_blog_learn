@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load pagination_tags %}
 
 {% block title %}{{ target_user.username }} 的主页{% endblock %}
 
@@ -63,23 +64,28 @@
 
                         {% if user_blogs.paginator.num_pages > 1 %}
                         <nav aria-label="博客分页" class="mt-4">
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination pagination-modern justify-content-center">
                                 {% if user_blogs.has_previous %}
-                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.previous_page_number }}">上一页</a></li>
+                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.previous_page_number }}">&lt;</a></li>
                                 {% else %}
-                                    <li class="page-item disabled"><span class="page-link">上一页</span></li>
+                                    <li class="page-item disabled"><span class="page-link">&lt;</span></li>
                                 {% endif %}
-                                {% for num in user_blogs.paginator.page_range %}
-                                    {% if user_blogs.number == num %}
-                                        <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
-                                    {% elif num > user_blogs.number|add:'-3' and num < user_blogs.number|add:'3' %}
-                                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+
+                                {% page_numbers user_blogs.number user_blogs.paginator.num_pages as page_list %}
+                                {% for p in page_list %}
+                                    {% if p == '...' %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% elif p == user_blogs.number %}
+                                        <li class="page-item active" aria-current="page"><span class="page-link">{{ p }}</span></li>
+                                    {% else %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ p }}">{{ p }}</a></li>
                                     {% endif %}
                                 {% endfor %}
+
                                 {% if user_blogs.has_next %}
-                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.next_page_number }}">下一页</a></li>
+                                    <li class="page-item"><a class="page-link" href="?page={{ user_blogs.next_page_number }}">&gt;</a></li>
                                 {% else %}
-                                    <li class="page-item disabled"><span class="page-link">下一页</span></li>
+                                    <li class="page-item disabled"><span class="page-link">&gt;</span></li>
                                 {% endif %}
                             </ul>
                         </nav>

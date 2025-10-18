@@ -181,8 +181,8 @@ def advanced_moderation(text: str) -> Tuple[bool, str]:
         probabilities = F.softmax(torch.tensor(logits), dim=1)
         predicted_class_id = torch.argmax(probabilities, dim=1).item()
         confidence = probabilities[0][predicted_class_id].item()
-
-        if ADVANCED_LABELS[predicted_class_id] == "违规" and confidence > 0.6:  # 可调整置信度阈值
+        print(f'confidence: {confidence}')
+        if  confidence >= 0.55:  # 可调整置信度阈值
             return False, f"内容违规"
 
         return True, ""

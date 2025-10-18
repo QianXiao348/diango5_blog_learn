@@ -1,0 +1,361 @@
+/*
+ * Global UI Theme (theme.css)
+ * Created: 2025-10-18
+ * Purpose: Beautify entire UI with consistent colors, typography, spacing, and component styles.
+ */
+
+:root {
+  /* Brand Palette */
+  --brand-primary: #1aa59a; /* teal */
+  --brand-primary-dark: #14877e;
+  --brand-secondary: #2f855a; /* green */
+  --brand-accent: #e76f51;   /* orange */
+  --brand-info: #3a86ff;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+
+  /* Surfaces & effects */
+  --surface: rgba(255,255,255,0.96);
+  --surface-muted: rgba(255,255,255,0.90);
+  --glass: rgba(255,255,255,0.65);
+  --border: rgba(0,0,0,0.06);
+
+  /* Radius & Shadows */
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 6px 16px rgba(0,0,0,0.06);
+  --shadow-md: 0 12px 24px rgba(0,0,0,0.10);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.16);
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --speed-fast: 140ms;
+  --speed-slow: 280ms;
+}
+
+/* Typography */
+body {
+  color: var(--text-main);
+  line-height: 1.7;
+  letter-spacing: 0.1px;
+}
+
+h1, h2, h3, h4, h5, h6 { 
+  color: var(--text-main);
+  font-weight: 700; 
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.1rem; }
+
+p { margin-bottom: 0.9rem; }
+
+/* Links */
+a { color: var(--brand-primary); transition: color var(--speed-fast) var(--ease); }
+a:hover { color: var(--brand-primary-dark); }
+
+/* Header / Navbar */
+.navbar, header.navbar {
+  background: linear-gradient( to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0.70) );
+  backdrop-filter: saturate(160%) blur(8px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.navbar .nav-link { color: var(--text-main); font-weight: 600; }
+.navbar .nav-link:hover { color: var(--brand-primary); }
+
+/* Footer */
+footer {
+  background: var(--surface-muted);
+  border-top: 1px solid var(--border);
+}
+footer a { color: var(--brand-primary); }
+footer a:hover { color: var(--brand-primary-dark); }
+
+/* Cards & list items */
+.card {
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--speed-fast) var(--ease), box-shadow var(--speed-fast) var(--ease);
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.card .card-title { font-weight: 700; }
+.card .card-subtitle { color: var(--text-muted); }
+
+.list-group-item {
+  border: none;
+  background: var(--surface);
+}
+.list-group-item + .list-group-item { margin-top: 8px; border-top: 1px solid var(--border); }
+
+/* Buttons */
+.btn-primary {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--brand-primary-dark); border-color: var(--brand-primary-dark); }
+.btn-outline-primary { color: var(--brand-primary); border-color: var(--brand-primary); }
+.btn-outline-primary:hover { color: #fff; background: var(--brand-primary); border-color: var(--brand-primary); }
+
+.btn-success { background: var(--brand-secondary); border-color: var(--brand-secondary); }
+.btn-success:hover { background: #276749; border-color: #276749; }
+
+/* Badges */
+.badge { border-radius: 999px; padding: 6px 10px; font-weight: 600; }
+.badge.bg-primary { background: var(--brand-primary) !important; }
+.badge.bg-success { background: var(--brand-secondary) !important; }
+
+/* Pagination */
+.pagination .page-link { 
+  color: var(--text-main); 
+  border: 1px solid var(--border);
+}
+.pagination .page-item.active .page-link { 
+  background: var(--brand-primary); 
+  border-color: var(--brand-primary);
+}
+.pagination .page-link:hover { color: var(--brand-primary); }
+
+/* Forms */
+.form-control, .form-select {
+  border-radius: var(--radius-sm);
+  border-color: var(--border);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 .2rem rgba(26,165,154,.18);
+}
+.input-group-text { background: var(--surface-muted); border-color: var(--border); }
+
+/* Comment area: soften pure white with a glassy surface */
+#comment-form .form-control, 
+#reportModal .form-control {
+  background: var(--glass);
+  backdrop-filter: blur(8px) saturate(140%);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+#comment-form .form-control::placeholder { color: var(--text-muted); }
+#comment-form textarea.form-control { min-height: 120px; }
+
+/* Comment content: soft typography and spacing */
+.comment-item .comment-content {
+  color: var(--text-main);
+  line-height: 1.75;
+  font-size: 0.96rem;
+  word-break: break-word;
+}
+.comment-item .comment-content p { margin-bottom: .5rem; }
+.comment-item .comment-content a { 
+  color: var(--brand-primary); 
+  text-decoration: underline; 
+  text-decoration-thickness: .06em; 
+  text-underline-offset: 3px; 
+}
+
+/* Alerts */
+.alert { border: none; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.alert-info { background: rgba(58,134,255,0.12); color: #0b3aa0; }
+.alert-success { background: rgba(47,133,90,0.14); color: #1f5138; }
+.alert-warning { background: rgba(231,111,81,0.16); color: #693323; }
+
+/* Article content */
+.blog-content, .article-content {
+  color: var(--text-main);
+}
+.blog-content img, .article-content img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin: 12px 0;
+}
+.blog-content blockquote, .article-content blockquote {
+  background: linear-gradient( to right, rgba(26,165,154,0.10), rgba(26,165,154,0.03) );
+  border-left: 4px solid var(--brand-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  color: #0f3e3a;
+}
+
+/* Code blocks */
+pre code, code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+pre {
+  background: #0e1525; /* dark surface for code */
+  color: #d1e7ff;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  overflow: auto;
+}
+
+/* Tables */
+.table { background: var(--surface); }
+.table thead th { border-bottom: 2px solid var(--border); }
+.table tbody td { border-top: 1px solid var(--border); }
+
+/* Micro-interactions */
+.card, .btn, .list-group-item, .navbar { will-change: transform, box-shadow; }
+.btn { transition: transform var(--speed-fast) var(--ease); }
+.btn:active { transform: translateY(1px); }
+
+/* Utility classes */
+.glass { background: var(--glass); backdrop-filter: blur(10px); }
+.elevate { box-shadow: var(--shadow-md); }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+
+/* Accessibility */
+:focus-visible { outline: 2px solid rgba(26,165,154,.6); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Dark mode baseline (optional) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: rgba(28,30,32,0.92);
+    --surface-muted: rgba(28,30,32,0.86);
+    --text-main: #e5e7eb;
+    --text-muted: #a1a1aa;
+    --border: rgba(255,255,255,0.08);
+  }
+  .navbar, header.navbar { background: rgba(28,30,32,0.7); }
+  .card { background: var(--surface); }
+  .list-group-item { background: var(--surface); }
+  pre { background: #0b1220; color: #cfe3ff; }
+}
+
+/* Crisp Modern — incremental tweaks aligned with your preference */
+.navbar { position: sticky; top: 0; z-index: 1030; }
+
+/* Global container spacing for better breathing room */
+.container, main.container { padding-top: 24px; padding-bottom: 32px; }
+
+/* Cards: consistent spacing and lighter meta color */
+.card { margin-bottom: 16px; }
+.card .card-body { padding: 14px 16px; }
+.card .card-title { margin-bottom: 6px; }
+.card .card-text, .card .text-muted { color: var(--text-muted); }
+
+/* Pagination: centered with subtle gaps */
+.pagination { justify-content: center; gap: 6px; }
+
+/* Pagination — glass style modern chips */
+.pagination-modern .page-link {
+  background: var(--glass);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+  min-width: 42px;
+  padding: 8px 12px;
+  transition: background var(--speed-fast) var(--ease), color var(--speed-fast) var(--ease), border-color var(--speed-fast) var(--ease), transform var(--speed-fast) var(--ease);
+}
+.pagination-modern .page-link:hover {
+  color: var(--brand-primary);
+  border-color: rgba(26,165,154,0.35);
+  transform: translateY(-1px);
+}
+.pagination-modern .page-item.active .page-link {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #fff;
+}
+.pagination-modern .page-item.disabled .page-link { opacity: 0.6; }
+
+@media (prefers-color-scheme: dark) {
+  .pagination-modern .page-link { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+}
+
+/* Footer: breathing space */
+footer { margin-top: 32px; padding-top: 16px; padding-bottom: 16px; }
+
+/* Soft badges for categories/tags */
+.badge-soft { background: rgba(26,165,154,0.10); color: var(--brand-primary); border: 1px solid rgba(26,165,154,0.18); }
+
+/* Article readability */
+.article-content h1, .article-content h2, .article-content h3 { scroll-margin-top: 80px; }
+.article-content img { border: 1px solid var(--border); }
+/* 卡片启用玻璃风格，增强通透与现代感 */
+.card {
+  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(12px) saturate(150%);
+}
+.card:hover {
+  background: rgba(255,255,255,0.72);
+}
+
+/* 列表项采用柔和玻璃底，保持统一风格 */
+.list-group-item {
+  background: var(--glass);
+  backdrop-filter: blur(8px) saturate(140%);
+}
+/* 导航栏恢复到最初的紧凑高度 */
+.navbar {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.navbar .nav-link {
+  padding-block: 0.4rem;
+  padding-inline: 0.5rem;
+  line-height: 1.2;
+}
+.navbar-brand {
+  font-size: 1rem;
+  padding: 0;
+  margin-right: 8px;
+}
+.navbar-toggler {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.9rem;
+}
+.navbar .container {
+  min-height: 40px;
+}
+
+@media (min-width: 992px) {
+  .navbar .nav-link { 
+    padding-block: 0.45rem;
+    padding-inline: 0.7rem;
+  }
+}
+
+/* --- Blog card footer & stats: unified across Home and Category --- */
+.blog-stats-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 统计项之间的间距 */
+}
+.blog-stats-footer .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px; /* 图标和文字间距 */
+  font-size: 0.85rem; /* 适合卡片底部 */
+  color: #6c757d; /* 与 text-body-secondary 保持一致 */
+}
+.blog-stats-footer .fas,
+.blog-stats-footer .far {
+  color: inherit; /* 继承父元素颜色 */
+}
+/* 卡片标题、摘要与底部信息的统一视觉 */
+.card-header a.text-dark {
+  font-size: 1.15rem;
+}
+.card-body .card-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #343a40;
+}
+.card-footer {
+  font-size: 0.8rem;
+  color: #6c757d;
+}

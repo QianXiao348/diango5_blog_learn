@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load pagination_tags %}
 
 {% block title %}博客首页{% endblock %}
 
@@ -95,46 +96,32 @@
     {# --- 分页导航 --- #}
     {% if blogs.paginator.num_pages > 1 %} {# 只有当总页数大于1时才显示分页 #}
     <nav aria-label="Page navigation" class="mt-4">
-        <ul class="pagination justify-content-center"> {# 使用 Bootstrap 的分页样式并居中 #}
-            {# 如果有上一页 #}
+        <ul class="pagination pagination-modern justify-content-center">
             {% if blogs.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo; 第一页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ blogs.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">上一页</a>
+                    <a class="page-link" href="?page={{ blogs.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&lt;</a>
                 </li>
             {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">&laquo; 第一页</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">上一页</span>
-                </li>
+                <li class="page-item disabled"><span class="page-link">&lt;</span></li>
             {% endif %}
 
-            {# 显示当前页码和总页数 #}
-            <li class="page-item active" aria-current="page">
-                <span class="page-link">
-                    {{ blogs.number }} / {{ blogs.paginator.num_pages }}
-                </span>
-            </li>
+            {% page_numbers blogs.number blogs.paginator.num_pages as page_list %}
+            {% for p in page_list %}
+                {% if p == '...' %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% elif p == blogs.number %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ p }}</span></li>
+                {% else %}
+                    <li class="page-item"><a class="page-link" href="?page={{ p }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
 
-            {# 如果有下一页 #}
             {% if blogs.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ blogs.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">下一页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ blogs.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">最后一页 &raquo;</a>
+                    <a class="page-link" href="?page={{ blogs.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&gt;</a>
                 </li>
             {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">下一页</span>
-                </li>
-                <li class="page-item disabled">
-                    <span class="page-link">最后一页 &raquo;</span>
-                </li>
+                <li class="page-item disabled"><span class="page-link">&gt;</span></li>
             {% endif %}
         </ul>
     </nav>
