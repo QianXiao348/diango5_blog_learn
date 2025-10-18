@@ -118,6 +118,16 @@ def edit_profile(request, user_id):
         if request.user != user:
             return HttpResponse('您没有权限修改此用户信息~ 喵！')
 
+        # 处理用户名更新
+        new_username = request.POST.get('username')
+        if new_username and new_username != user.username:
+            # 检查用户名是否已存在
+            if User.objects.filter(username=new_username).exists():
+                return HttpResponse('用户名已存在，请选择其他用户名 ~ 喵！')
+            # 更新用户名
+            user.username = new_username
+            user.save()
+            
         # 上传的文件保存在 request.FILES 中，通过参数传递给表单类
         profile_form = ProfileForm(request.POST, request.FILES, instance=profile)
 

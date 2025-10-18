@@ -1,54 +1,100 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %} 用户信息 {% endblock title %}
 {% block main %}
     <div class="container">
         <div class="row">
             <div class="col-12">
-                <br>
-                <div class="col-md-4">用户名: {{ user.username }}</div>
-                <br>
-                {% if profile.avatar %}
-                    <div class="col-md-4">头像</div>
-                    <img src="{{ profile.avatar.url }}" style="max-width: 20%; border-radius: 15%;" class="col-md-4">
-                {% else %}
-                    <h5 class="col-md-4">默认头像</h5>
-                    <img src="{% static 'image/21.png' %}" style="max-width: 20%; border-radius: 15%;" class="col-md-4"></img>
-                {% endif %}
-                <br>
-                <form method="post" action="." enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <!-- avatar -->
-                    <div class="form-group col-md-4">
-                        <label for="avatar">上传头像</label>
-                        <input type="file" class="form-control-file" name="avatar" id="avatar">
+                <h3 class="mb-4">个人资料设置</h3>
+                <div class="row">
+                    <!-- 左侧个人信息和头像 -->
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">基本信息</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ user.username }}</h5>
+                                 <div class="mb-3">
+                                     {% if profile.avatar %}
+                                         <img src="{{ profile.avatar.url }}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; max-height: 150px;">
+                                     {% else %}
+                                         <img src="{% static 'image/21.png' %}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; max-height: 150px;">
+                                     {% endif %}
+                                 </div>
+                                <p class="text-muted">
+                                    {% if profile.bio %}
+                                        {{ profile.bio|truncatechars:100 }}
+                                    {% else %}
+                                        暂无个人简介
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'qxauth:password_change' %}" class="btn btn-outline-secondary btn-sm">修改密码</a>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group col-md-3">
-                    <label for="gender">性别</label>
-                    <select class="form-control" id="gender" name="gender">
-                        <option value="male" {% if profile.gender == 'male' %}selected{% endif %}>男</option>
-                        <option value="female" {% if profile.gender == 'female' %}selected{% endif %}>女</option>
-                    </select>
+                    
+                    <!-- 右侧编辑表单 -->
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">编辑资料</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post" action="." enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                         <!-- 用户名修改 -->
+                                         <div class="col-md-6 mb-3">
+                                             <label for="username" class="form-label">用户名</label>
+                                             <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}">
+                                         </div>
+                                         
+                                         <!-- 头像上传 -->
+                                         <div class="col-md-6 mb-3">
+                                             <label for="avatar" class="form-label">更换头像</label>
+                                             <input type="file" class="form-control" name="avatar" id="avatar">
+                                         </div>
+                                         
+                                         <!-- 性别选择 -->
+                                         <div class="col-md-6 mb-3">
+                                             <label for="gender" class="form-label">性别</label>
+                                             <select class="form-select" id="gender" name="gender">
+                                                 <option value="male" {% if profile.gender == 'male' %}selected{% endif %}>男</option>
+                                                 <option value="female" {% if profile.gender == 'female' %}selected{% endif %}>女</option>
+                                             </select>
+                                         </div>
+                                        
+                                        <!-- 电话 -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="phone" class="form-label">电话</label>
+                                            <input type="text" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
+                                        </div>
+                                        
+                                        <!-- 出生日期 -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="birth" class="form-label">出生年月日</label>
+                                            <input type="date" class="form-control" id="birth" name="birth" value="{{ profile.birth|date:'Y-m-d'}}">
+                                        </div>
+                                        
+                                        <!-- 个人简介 -->
+                                        <div class="col-12 mb-3">
+                                            <label for="bio" class="form-label">个人简介</label>
+                                            <textarea class="form-control" id="bio" name="bio" rows="4">{{ profile.bio }}</textarea>
+                                            <div class="form-text text-muted">简单介绍一下自己吧，让大家更了解你</div>
+                                        </div>
+                                        
+                                        <!-- 提交按钮 -->
+                                        <div class="col-12 text-end">
+                                            <button type="submit" class="btn btn-primary">保存修改</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    <!-- phone -->
-                    <div class="form-group col-md-3">
-                        <label for="phone">电话</label>
-                        <input type="text" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
-                    </div>
-                    <div class="form-group col-md-3">
-                    <label for="birth">出生年月日</label>
-                    <input type="date" class="form-control" id="birth" name="birth" value="{{ profile.birth|date:'Y-m-d'}}">
+                </div>
             </div>
-            <!-- bio -->
-            <div class="form-group col-md-3">
-                <label for="bio">简介</label>
-                <!-- 文本区域 -->
-                <textarea type="text" class="form-control" id="bio" name="bio" rows="6">{{ profile.bio }}</textarea>
-            </div>
-            <a href="{% url 'qxauth:password_change' %}" class="btn btn-link">修改密码</a>
-            <!-- 提交按钮 -->
-            <button type="submit" class="btn btn-primary">提交</button>
-            </form>
         </div>
-    </div>
     </div>
 {% endblock %}
