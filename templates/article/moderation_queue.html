@@ -28,8 +28,8 @@
                         {% endif %}
                     </div>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-success btn-sm review-btn" data-log-id="{{ log.id }}" data-action="approve">通过</button>
-                        <button type="button" class="btn btn-danger btn-sm review-btn" data-log-id="{{ log.id }}" data-action="reject">拒绝</button>
+                        <button type="button" class="btn btn-success btn-sm review-btn" data-log-id="{{ log.id }}" data-action="approve" data-label="{% if log.flagged_by_ai %}通过{% else %}驳回举报{% endif %}">{% if log.flagged_by_ai %}通过{% else %}驳回举报{% endif %}</button>
+                        <button type="button" class="btn btn-danger btn-sm review-btn" data-log-id="{{ log.id }}" data-action="reject" data-label="{% if log.flagged_by_ai %}拒绝{% else %}确认违规{% endif %}" data-prompt="{% if log.flagged_by_ai %}请输入拒绝原因（可选）{% else %}请输入确认违规原因（可选）{% endif %}">{% if log.flagged_by_ai %}拒绝{% else %}确认违规{% endif %}</button>
                     </div>
                 </div>
             {% endfor %}
@@ -43,12 +43,20 @@
     $(document).ready(function() {
         $('.review-btn').on('click', function() {
             const btn = $(this);
+            const item = btn.closest('.list-group-item');
+            const allBtns = item.find('.review-btn');
             const logId = btn.data('log-id');
             const action = btn.data('action');
+            const label = btn.data('label') || (action === 'approve' ? '通过' : '拒绝');
+
+            // 防重复提交：在请求期间禁用该条目的两个按钮
+            allBtns.prop('disabled', true);
 
             if (action === 'reject') {
-                const reason = prompt('请输入拒绝原因（可选）：', '');
+                const promptMsg = btn.data('prompt') || '请输入拒绝原因（可选）';
+                const reason = prompt(promptMsg + '：', '');
                 if (reason === null) { // 用户取消输入
+                    allBtns.prop('disabled', false);
                     return;
                 }
                 $.ajax({
@@ -57,20 +65,30 @@
                     headers: { 'X-CSRFToken': getCookie('csrftoken') },
                     data: { reason: reason },
                     success: function(response) {
-                        alert(response.msg);
-                        if (response.code === 200) {
-                            btn.closest('.list-group-item').remove();
+                        const ok = response && (response.code === 200 || response.success === true);
+                        alert(response.msg || (ok ? '操作成功' : '操作未完成'));
+                        if (ok) {
+                            item.remove();
+                        } else {
+                            allBtns.prop('disabled', false);
                         }
                     },
                     error: function(jqXHR) {
-                        alert('操作失败！');
-                        console.error('AJAX Error:', jqXHR);
+                        if (jqXHR.status === 404) {
+                            alert('该记录已处理或不存在，已为你移除。');
+                            item.remove();
+                        } else {
+                            alert('操作失败！');
+                            console.error('AJAX Error:', jqXHR);
+                            allBtns.prop('disabled', false);
+                        }
                     }
                 });
                 return;
             }
 
-            if (!confirm(`确定要 ${action === 'approve' ? '通过' : '拒绝'} 这条内容吗？`)) {
+            if (!confirm(`确定要 ${label} 这条内容吗？`)) {
+                allBtns.prop('disabled', false);
                 return;
             }
 
@@ -79,14 +97,23 @@
                 method: 'POST',
                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
                 success: function(response) {
-                    alert(response.msg);
-                    if (response.code === 200) {
-                        btn.closest('.list-group-item').remove();
+                    const ok = response && (response.code === 200 || response.success === true);
+                    alert(response.msg || (ok ? '操作成功' : '操作未完成'));
+                    if (ok) {
+                        item.remove();
+                    } else {
+                        allBtns.prop('disabled', false);
                     }
                 },
                 error: function(jqXHR) {
-                    alert('操作失败！');
-                    console.error('AJAX Error:', jqXHR);
+                    if (jqXHR.status === 404) {
+                        alert('该记录已处理或不存在，已为你移除。');
+                        item.remove();
+                    } else {
+                        alert('操作失败！');
+                        console.error('AJAX Error:', jqXHR);
+                        allBtns.prop('disabled', false);
+                    }
                 }
             });
         });

@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 
 from django.shortcuts import get_object_or_404, render, redirect, reverse
 from django.http.response import JsonResponse
@@ -688,19 +689,28 @@ def review_action(request, log_id, action):
         )
         return JsonResponse({'code': 200, 'msg': '内容已通过审核！'})
     elif action == 'reject':
-        # 人工未填写原因则回退到 AI/举报的原始原因
-        orig_reason = log.reason or ''
-        input_reason = (request.POST.get('reason', '') or '').strip()
-        notification_reason = input_reason if input_reason else orig_reason
-        if not notification_reason:
-            notification_reason = '未提供原因'
-
+        # 在 review_action 的拒绝分支中，确保用户通知使用去敏后的原因
+        moderator_reason = (request.POST.get('reason', '') or '').strip()
+        original_reason = (log.reason or '').strip()
+        internal_reason = moderator_reason or original_reason or '未提供原因'
+        # 后台审计保留完整原因（含置信度）
+        log.reason = f'人工复核拒绝，原因：{internal_reason}'
         log.status = 'rejected'
         log.reviewed_at = timezone.now()
         log.moderator = request.user
-        # 记录到日志中的最终原因统一带上“人工复核拒绝”前缀，便于区分
-        log.reason = f"人工复核拒绝，原因：{notification_reason}"
         log.save()
+
+        # 用户侧通知原因去敏（不显示置信度）
+        sanitized_reason = sanitize_reason_text(internal_reason)
+        Notification.objects.create(
+            recipient=log.author,
+            actor=request.user,
+            verb='内容审核结果',
+            content='未通过审核',
+            description=f'你的内容未通过人工审核。原因：{sanitized_reason}',
+            target_url=reverse('blog:index')
+        )
+        return JsonResponse({'code': 200, 'msg': '已拒绝并通知作者'})
 
         target_url = ""
         if log.content_type == 'blog':
@@ -729,13 +739,13 @@ def review_action(request, log_id, action):
                 target_url=reverse('blog:index')
             )
 
-        # 创建审核拒绝通知（描述里只展示纯原因文本；若人工未填则采用 AI/举报原因）
+        # 创建审核拒绝通知（描述里只展示去敏后的原因文本；若人工未填则采用 AI/举报原因）
         Notification.objects.create(
             actor=log.moderator,
             recipient=log.author,
             verb=verb,
             content='审核拒绝',
-            description=f'你的内容存在违规了，原因是：{notification_reason}',
+            description=f'你的内容存在违规了，原因是：{sanitized_reason}',
             target_url=target_url
         )
         return JsonResponse({'code': 200, 'msg': '内容未通过审核！'})
@@ -819,3 +829,20 @@ def report_post(request, blog_id):
         author=blog.author,
     )
     return JsonResponse({'code': 200, 'msg': '举报成功，我们会尽快处理！'})
+
+
+# 统一的用户侧原因去敏函数：移除任何“置信度”相关片段
+def sanitize_reason_text(reason: str) -> str:
+    if not reason:
+        return ''
+    cleaned = reason
+    patterns = [
+        r'[（(][^）)]*置信度[^）)]*[）)]',
+        r'模型?置信度[:：]\s*[0-9.]+',
+    ]
+    for p in patterns:
+        cleaned = re.sub(p, '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    cleaned = re.sub(r'([，；,;])\s*([，；,;])+', r'\1', cleaned)
+    cleaned = cleaned.strip(' ，；,;')
+    return cleaned

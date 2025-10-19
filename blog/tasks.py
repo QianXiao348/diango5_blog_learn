@@ -2,6 +2,7 @@ from celery import shared_task
 from django.utils import timezone
 from django.urls import reverse
 from django.db import transaction
+import re
 
 from .models import ModerationLog, Blog, Notification
 from .moderation import moderate_content
@@ -90,12 +91,33 @@ def run_blog_moderation(self, log_id: int):
         log.flagged_by_ai = True
         log.save()
 
+        # 用户侧通知不显示模型置信度，仅保留原因文本
+        sanitized_reason = sanitize_reason_text(log.reason)
+
         Notification.objects.create(
             recipient=log.author,
             actor=None,
             verb='博客发布审核',
             content='进入人工审核队列',
-            description=f'AI 初审未通过，已提交人工复核。原因：{log.reason}',
+            description=f'AI 初审未通过，已提交人工复核。原因：{sanitized_reason}',
             target_url=reverse('blog:index')
         )
         return {'status': 'pending', 'msg': 'AI 初审未通过，已加入人工审核队列'}
+
+
+# 用户侧通知的原因去敏：移除任何包含“置信度”的括号或文本片段
+def sanitize_reason_text(reason: str) -> str:
+    if not reason:
+        return ''
+    cleaned = reason
+    patterns = [
+        r'[（(][^）)]*置信度[^）)]*[）)]',   # 括号内包含“置信度”的片段
+        r'模型?置信度[:：]\s*[0-9.]+',      # 非括号形式的“模型置信度：0.91”
+    ]
+    for p in patterns:
+        cleaned = re.sub(p, '', cleaned, flags=re.IGNORECASE)
+    # 规范多余空格与标点
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    cleaned = re.sub(r'([，；,;])\s*([，；,;])+', r'\1', cleaned)
+    cleaned = cleaned.strip(' ，；,;')
+    return cleaned
