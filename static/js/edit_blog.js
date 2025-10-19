@@ -62,14 +62,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(data.msg);
                     const redirectUrlTemplate = submitBtn.dataset.redirectUrl;
                     window.location.href = redirectUrlTemplate.replace('0', data.data.blog_id);
-                } else if (data.code === 202 || data.code === 400) { // 处理审核失败和参数错误
-                    // 修复：从返回的JSON数据中获取msg字段
-                    alert(`错误：内容违规`);
+                } else if (data.code === 202) {
+                    // 异步审核提示（非错误）
+                    alert(data.msg || '文章正在审核，审核完成后将通过通知告知结果');
+                } else if (data.code === 400) { // 参数错误
+                    alert(`错误：参数错误`);
                     if (data.errors && Object.keys(data.errors).length > 0) {
                         console.error('表单提交错误:', data.errors);
                     }
                 } else {
-                    // 修复：如果不是预期的code，也显示错误信息
                     alert(`发生未知错误：${data.msg}`);
                 }
             })

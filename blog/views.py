@@ -20,6 +20,7 @@ from .moderation import moderate_content
 from .models import BlogCategory, Blog, BlogComment, Notification, BlogLike, ModerationLog, User
 from qxauth.models import Follow
 from .forms import PubBlogForm, PubCommentForm
+from .tasks import run_blog_moderation
 
 
 def index(request):
@@ -195,33 +196,23 @@ def edit_blog(request, blog_id):
             content = form.cleaned_data.get('content')
             category = form.cleaned_data.get('category')
 
-            # 内容审核
-            is_title_safe, title_moderation_msg = moderate_content(title)
-            is_content_safe, content_moderation_msg = moderate_content(content)
-
-            if not is_title_safe or not is_content_safe:
-                try:
-                    ModerationLog.objects.create(
-                        content_type='blog',
-                        content_id=blog.id,
-                        original_content=f'标题: {title}\n内容: {content}',
-                        flagged_by_ai=True,
-                        reason=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
-                        status='pending',
-                        author=blog.author,
-                        category=category,
-                    )
-                    return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核！'})
-                except Exception as e:
-                    # 如果 ModerationLog 创建失败，返回 500 错误
-                    print(f"Error creating ModerationLog for edited blog: {e}")
-                    return JsonResponse({'code': 500, 'msg': f'服务器内部错误：审核日志创建失败'})
+            # 异步审核：创建日志并提交 Celery 任务
             try:
-                blog = form.save()
-                return JsonResponse({'code': 200, 'msg': '博客更新成功！', 'data': {'blog_id': blog.id}})
+                log = ModerationLog.objects.create(
+                    content_type='blog',
+                    content_id=blog.id,
+                    original_content=f'标题: {title}\n内容: {content}',
+                    flagged_by_ai=True,
+                    reason='异步审核',
+                    status='pending',
+                    author=blog.author,
+                    category=category,
+                )
+                run_blog_moderation.delay(log.id)
+                return JsonResponse({'code': 202, 'msg': '文章正在审核，审核完成后将通过通知告知结果'})
             except Exception as e:
-                print(f"Error saving edited blog: {e}")
-                return JsonResponse({'code': 500, 'msg': '服务器内部错误：博客保存失败'})
+                print(f"Error creating ModerationLog for edited blog: {e}")
+                return JsonResponse({'code': 500, 'msg': f'服务器内部错误：审核日志创建失败'})
         else:
             print(form.errors)
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
@@ -242,31 +233,25 @@ def pub_blog(request):
         if form.is_valid():
             title = form.cleaned_data.get('title')
             content = form.cleaned_data.get('content')
+            category = form.cleaned_data.get('category')
 
-            # ai审核
-            is_title_safe, title_moderation_msg = moderate_content(title)
-            is_content_safe, content_moderation_msg = moderate_content(content)
-
-            # 智能审查未通过，不立即发布，而是创建待审核日志
-            if not is_title_safe or not is_content_safe:
-                ModerationLog.objects.create(
+            # 异步审核：创建日志并提交 Celery 任务
+            try:
+                log = ModerationLog.objects.create(
                     content_type='blog',
                     content_id=None,
                     original_content=f'标题: {title}\n内容: {content}',
                     flagged_by_ai=True,
-                    reason=f'标题审查: {title_moderation_msg}; 内容审查: {content_moderation_msg}',
+                    reason='异步审核',
                     status='pending',
                     author=request.user,
-                    category=form.cleaned_data.get('category'),
+                    category=category,
                 )
-                return JsonResponse({'code': 202, 'msg': '内容包含敏感词，已提交审核，请等待管理员审核。'})
-
-            # 审核通过，正常保存
-            # 使用 form.save(commit=False) 获取模型实例，但不立即保存到数据库
-            blog = form.save(commit=False)
-            blog.author = request.user
-            blog.save()
-            return JsonResponse({'code': 200, 'msg': '发布成功！', 'data': {'blog_id': blog.id}})
+                run_blog_moderation.delay(log.id)
+                return JsonResponse({'code': 202, 'msg': '文章正在审核，审核完成后将通过通知告知结果'})
+            except Exception as e:
+                print(f"Error creating ModerationLog for new blog: {e}")
+                return JsonResponse({'code': 500, 'msg': '服务器内部错误：审核日志创建失败'})
         else:
             return JsonResponse({'code': 400, 'msg': '参数错误！', 'errors': form.errors})
 
@@ -629,6 +614,7 @@ def review_action(request, log_id, action):
                 recipient=log.reporter,
                 actor=log.moderator,
                 verb='审核结果通知',
+                content='举报未违规',
                 description='你举报的文章经审核未发现违规行为。',
                 target_url=reverse('blog:blog_detail', args=[content_obj.id])
             )
@@ -696,16 +682,24 @@ def review_action(request, log_id, action):
             actor=log.moderator,
             recipient=log.author,
             verb=verb,
+            content='审核通过',
             description=f'你的内容已通过审核。',
             target_url=target_url
         )
         return JsonResponse({'code': 200, 'msg': '内容已通过审核！'})
     elif action == 'reject':
-        custom_reason = request.POST.get('reason', log.reason)
+        # 人工未填写原因则回退到 AI/举报的原始原因
+        orig_reason = log.reason or ''
+        input_reason = (request.POST.get('reason', '') or '').strip()
+        notification_reason = input_reason if input_reason else orig_reason
+        if not notification_reason:
+            notification_reason = '未提供原因'
+
         log.status = 'rejected'
         log.reviewed_at = timezone.now()
         log.moderator = request.user
-        log.reason = f"人工复核拒绝，原因：{custom_reason}"
+        # 记录到日志中的最终原因统一带上“人工复核拒绝”前缀，便于区分
+        log.reason = f"人工复核拒绝，原因：{notification_reason}"
         log.save()
 
         target_url = ""
@@ -730,16 +724,18 @@ def review_action(request, log_id, action):
                 recipient=log.reporter,
                 actor=log.moderator,
                 verb='举报成功通知',
+                content='举报成功',
                 description=f'你举报的博客文章经审核确认为违规，已进行处理，感谢你的贡献！',
                 target_url=reverse('blog:index')
             )
 
-        # 创建审核拒绝通知
+        # 创建审核拒绝通知（描述里只展示纯原因文本；若人工未填则采用 AI/举报原因）
         Notification.objects.create(
             actor=log.moderator,
             recipient=log.author,
             verb=verb,
-            description=f'你的内容存在违规了，原因是：{custom_reason}',
+            content='审核拒绝',
+            description=f'你的内容存在违规了，原因是：{notification_reason}',
             target_url=target_url
         )
         return JsonResponse({'code': 200, 'msg': '内容未通过审核！'})

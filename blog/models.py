@@ -178,5 +178,6 @@ class ModerationLog(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        source = '举报' if self.flagged_by_ai else 'AI审核'
+        # 修正：flagged_by_ai=True 应显示为“AI审核”，False 为“举报”
+        source = 'AI审核' if self.flagged_by_ai else '举报'
         return f'{source}记录 - 类型: {self.content_type}, ID: {self.id}'

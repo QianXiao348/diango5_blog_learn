@@ -179,11 +179,13 @@ def advanced_moderation(text: str) -> Tuple[bool, str]:
 
         # 将logits转换为概率，并判断结果
         probabilities = F.softmax(torch.tensor(logits), dim=1)
-        predicted_class_id = torch.argmax(probabilities, dim=1).item()
-        confidence = probabilities[0][predicted_class_id].item()
-        print(f'confidence: {confidence}')
-        if  confidence >= 0.55:  # 可调整置信度阈值
-            return False, f"内容违规"
+        prob_normal = probabilities[0][0].item()
+        prob_violation = probabilities[0][1].item()
+        print(f'advanced moderation -> prob_normal: {prob_normal:.3f}, prob_violation: {prob_violation:.3f}')
+
+        threshold = 0.55
+        if prob_violation >= threshold:
+            return False, f"内容违规（模型置信度：{prob_violation:.2f}）"
 
         return True, ""
 
